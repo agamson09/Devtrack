@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN avatar_seed VARCHAR(100) DEFAULT NULL AFTER avatar_style;

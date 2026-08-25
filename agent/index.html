@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DevTrack Agent</title>
+</head>
+<body>
+  <h1>DevTrack RDP Agent (Electron Background)</h1>
+  <p>This process runs in the background to serve Remote Desktop.</p>
+  <video id="video-stream" style="position:absolute; width:1px; height:1px; opacity:0.01; pointer-events:none;" autoplay muted playsinline></video>
+  <canvas id="capture-canvas" style="position:absolute; width:1px; height:1px; opacity:0.01; pointer-events:none;"></canvas>
+  <script src="./renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[Unit]
+Description=DevTrack File Activity Monitor
+After=network.target mysql.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /var/www/devtrack/scripts/file-monitor.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/file-monitor.log
+StandardError=append:/var/log/file-monitor.log
+
+[Install]
+WantedBy=multi-user.target

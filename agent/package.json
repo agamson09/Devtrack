@@ -1,0 +1,29 @@
+{
+  "name": "devtrack-agent",
+  "version": "3.2.0",
+  "description": "DevTrack Remote Desktop Agent (Electron)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.devtrack.agent",
+    "productName": "DevTrack Agent",
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "koffi": "^2.8.11",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3"
+  }
+}

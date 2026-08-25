@@ -1,0 +1,11 @@
+{
+  "defaultWorkspace": "default",
+  "workspaces": {
+    "default": {
+      "name": "DevTrack",
+      "slug": "default",
+      "database": "devtrack",
+      "url": "http://localhost:3000"
+    }
+  }
+}

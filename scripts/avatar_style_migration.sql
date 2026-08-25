@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN avatar_style VARCHAR(50) DEFAULT NULL AFTER avatar;

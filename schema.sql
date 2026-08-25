@@ -1,0 +1,157 @@
+﻿CREATE DATABASE IF NOT EXISTS devtrack CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE devtrack;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin', 'member') DEFAULT 'member',
+  avatar VARCHAR(500) DEFAULT NULL,
+  telegram_chat_id VARCHAR(100) DEFAULT NULL,
+  email_notifications TINYINT(1) DEFAULT 1,
+  telegram_notifications TINYINT(1) DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  description TEXT,
+  git_repo_url VARCHAR(500) DEFAULT NULL,
+  git_webhook_secret VARCHAR(200) DEFAULT NULL,
+  owner_id INT NOT NULL,
+  status ENUM('active', 'archived', 'completed') DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(300) NOT NULL,
+  description TEXT,
+  project_id INT NOT NULL,
+  assigned_to INT DEFAULT NULL,
+  created_by INT NOT NULL,
+  status ENUM('todo', 'in_progress', 'review', 'done') DEFAULT 'todo',
+  priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+  deadline DATETIME DEFAULT NULL,
+  estimated_hours DECIMAL(6,2) DEFAULT NULL,
+  actual_hours DECIMAL(6,2) DEFAULT NULL,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS task_commits (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  commit_hash VARCHAR(40) NOT NULL,
+  commit_message VARCHAR(500),
+  author VARCHAR(100),
+  committed_at DATETIME DEFAULT NULL,
+  file_changes JSON DEFAULT NULL,
+  added_lines INT DEFAULT 0,
+  deleted_lines INT DEFAULT 0,
+  status ENUM('auto', 'manual') DEFAULT 'auto',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS task_comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS task_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  field_changed VARCHAR(50) NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  message TEXT,
+  link VARCHAR(500) DEFAULT NULL,
+  is_read TINYINT(1) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS activity_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) NOT NULL,
+  target_id INT,
+  details JSON DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS wiki_notes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT DEFAULT NULL,
+  title VARCHAR(200) NOT NULL,
+  slug VARCHAR(220) NOT NULL,
+  content MEDIUMTEXT,
+  tags VARCHAR(500) DEFAULT NULL,
+  created_by INT NOT NULL,
+  tenant_id INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_wiki_slug (slug),
+  INDEX idx_wiki_project (project_id),
+  INDEX idx_wiki_tenant (tenant_id)
+);
+
+CREATE TABLE IF NOT EXISTS remote_deploy_configs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) DEFAULT NULL,
+  host VARCHAR(255) NOT NULL,
+  port INT DEFAULT 22,
+  username VARCHAR(100) NOT NULL,
+  password_enc TEXT NOT NULL,
+  project_path VARCHAR(500) DEFAULT '/var/www/devtrack',
+  last_connected DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS db_connections (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  host VARCHAR(255) NOT NULL,
+  port INT DEFAULT 3306,
+  username VARCHAR(100) NOT NULL,
+  password_enc TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (name, email, password, role) VALUES
+('Admin', 'admin@devtrack.local', '$2b$10$.ZiAMJSLmU4S2BFn2aSKL.D4VW6FAUW64StTWeXLAg2/4rn3tvUxS', 'admin');
+
+INSERT INTO users (name, email, password, role) VALUES
+('Developer 1', 'dev1@devtrack.local', '$2b$10$.ZiAMJSLmU4S2BFn2aSKL.D4VW6FAUW64StTWeXLAg2/4rn3tvUxS', 'member');
