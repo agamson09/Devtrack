@@ -13,6 +13,18 @@ function SWRegister() {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) return
 
+    // Dev: SW cache-first strategy makes hot-reload serve stale bundles —
+    // unregister and wipe caches instead of registering.
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => regs.forEach((r) => r.unregister()))
+        .catch(() => {})
+      if (window.caches && caches.keys) {
+        caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {})
+      }
+      return
+    }
+
     navigator.serviceWorker.register('/sw.js').catch(() => {})
   }, [])
 
