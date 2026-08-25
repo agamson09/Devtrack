@@ -21,7 +21,7 @@ function TypeBadge({ type }) {
   return <span className={`text-[10px] border px-1.5 py-0.5 rounded-full uppercase font-semibold ${TYPE_BADGE[t] || TYPE_BADGE.mysql}`}>{t}</span>;
 }
 
-function DatabaseCard({ db, backups, onBackup, onBackupTsql, onRestore, onVerify, onExpandTables, tablesLoading, connType, backupMatches, selected, onSelect, backingDb, verifying }) {
+function DatabaseCard({ db, backups = [], onBackup, onBackupTsql, onRestore, onVerify, onExpandTables, tablesLoading, connType, backupMatches, selected, onSelect, backingDb, verifying }) {
   const [expanded, setExpanded] = useState(false);
   const dbBackups = backups.filter(b => backupMatches(db.name, b.filename));
   const isBacking = backingDb === db.name;
@@ -650,6 +650,7 @@ export default function DatabasePage() {
                 <DatabaseCard
                   key={db.name}
                   db={db}
+                  backups={data.backups}
                   onBackup={handleBackupSingle}
                   onBackupTsql={handleBackupTsql}
                   onRestore={handleRestore}
