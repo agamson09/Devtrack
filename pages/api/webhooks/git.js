@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import db from '@/lib/db'
+import { autoDeployForPush } from '@/lib/gitDeploy'
 
 const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
 const GITLAB_WEBHOOK_TOKEN = process.env.GITLAB_WEBHOOK_TOKEN
@@ -118,6 +119,24 @@ export default async function handler(req, res) {
             [committerId, 'linked commit to task', 'task', taskId, JSON.stringify({ commit_hash: commit.sha.substring(0, 7), title: existingTask.title })]
           )
         }
+      }
+    }
+
+    // ---- Auto-deploy: push matching an auto_deploy target ------------------
+    if (eventType === 'push' || eventType === 'Push Events') {
+      const pushedRepo = payload.repository?.clone_url
+        || payload.repository?.html_url
+        || payload.project?.git_http_url
+        || null
+      const pushedBranch = (payload.ref || '').replace('refs/heads/', '')
+
+      if (pushedRepo && pushedBranch) {
+        // Respond immediately — deploy runs in the background
+        autoDeployForPush(pushedRepo, pushedBranch)
+          .then((r) => {
+            if (r) console.log(`[webhook] auto-deploy ${r.skipped ? 'skipped' : 'finished'} for ${r.config}`)
+          })
+          .catch((err) => console.error('[webhook] auto-deploy failed:', err.message))
       }
     }
 

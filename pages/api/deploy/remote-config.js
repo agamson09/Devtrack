@@ -2,6 +2,8 @@ import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
 import { encryptSecret, decryptSecret } from '@/lib/vaultCrypto'
 
+const GIT_FIELDS = ['repo_url', 'branch', 'install_cmd', 'build_cmd', 'restart_cmd']
+
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Not authenticated' })
@@ -11,7 +13,9 @@ export default async function handler(req, res) {
   if (req.method === 'GET' && !req.query.id) {
     try {
       const rows = await db.query(
-        `SELECT id, name, host, port, username, project_path, last_connected, created_at, updated_at
+        `SELECT id, name, host, port, username, project_path, repo_url, branch,
+                install_cmd, build_cmd, restart_cmd, auto_deploy,
+                last_commit, last_deployed_at, last_connected, created_at, updated_at
          FROM remote_deploy_configs ORDER BY name ASC`
       )
       return res.status(200).json({ configs: rows })
@@ -25,7 +29,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { action } = req.body
 
-    // --- SSH connectivity test -------------------------------------------
+    // --- SSH + git connectivity test ---------------------------------------
     if (action === 'test') {
       const { id, host, port, username, password, project_path } = req.body
       try {
@@ -44,10 +48,21 @@ export default async function handler(req, res) {
         const conn = new Client()
         const result = await new Promise((resolve) => {
           const timer = setTimeout(() => resolve({ ok: false, message: 'Timeout after 10s' }), 10000)
+          let out = ''
           conn.on('ready', () => {
-            clearTimeout(timer)
-            conn.end()
-            resolve({ ok: true, message: 'SSH connection OK' })
+            conn.exec('git --version', (err, stream) => {
+              if (err) { clearTimeout(timer); conn.end(); return resolve({ ok: true, message: 'SSH OK (git check skipped)' }) }
+              stream.on('data', (d) => { out += d.toString() })
+              stream.on('close', () => {
+                clearTimeout(timer)
+                conn.end()
+                const gitOk = /git version/.test(out)
+                resolve({
+                  ok: true,
+                  message: gitOk ? `SSH OK — ${out.trim()}` : 'SSH OK — WARNING: git not found on server',
+                })
+              })
+            })
           }).on('error', (err) => {
             clearTimeout(timer)
             resolve({ ok: false, message: err.message })
@@ -67,10 +82,14 @@ export default async function handler(req, res) {
     }
 
     // --- save (create or update) ------------------------------------------
-    const { id, name, host, port, username, password, project_path } = req.body
+    const { id, name, host, port, username, password, project_path, repo_url, repo_token, branch, install_cmd, build_cmd, restart_cmd, auto_deploy } = req.body
     if (!host || !username) {
       return res.status(400).json({ error: 'Host and username are required' })
     }
+    const safeBranch = (branch || 'main').replace(/[^a-zA-Z0-9._\-\/]/g, '') || 'main'
+    const tokenEnc = repo_token ? encryptSecret(repo_token) : null
+    const auto = auto_deploy === true || auto_deploy === 1 ? 1 : 0
+
     try {
       if (id) {
         const existing = await db.queryOne('SELECT id FROM remote_deploy_configs WHERE id = ?', [id])
@@ -78,13 +97,19 @@ export default async function handler(req, res) {
 
         if (password) {
           await db.update(
-            'UPDATE remote_deploy_configs SET name = ?, host = ?, port = ?, username = ?, password_enc = ?, project_path = ? WHERE id = ?',
-            [name || host, host, parseInt(port) || 22, username, encryptSecret(password), project_path || '/var/www/devtrack', id]
+            `UPDATE remote_deploy_configs SET name = ?, host = ?, port = ?, username = ?, password_enc = ?, project_path = ?,
+             repo_url = ?, branch = ?, install_cmd = ?, build_cmd = ?, restart_cmd = ?, auto_deploy = ?${tokenEnc ? ', repo_token = ?' : ''} WHERE id = ?`,
+            tokenEnc
+              ? [name || host, host, parseInt(port) || 22, username, encryptSecret(password), project_path || null, repo_url || null, safeBranch, install_cmd || null, build_cmd || null, restart_cmd || null, auto, tokenEnc, id]
+              : [name || host, host, parseInt(port) || 22, username, encryptSecret(password), project_path || null, repo_url || null, safeBranch, install_cmd || null, build_cmd || null, restart_cmd || null, auto, id]
           )
         } else {
           await db.update(
-            'UPDATE remote_deploy_configs SET name = ?, host = ?, port = ?, username = ?, project_path = ? WHERE id = ?',
-            [name || host, host, parseInt(port) || 22, username, project_path || '/var/www/devtrack', id]
+            `UPDATE remote_deploy_configs SET name = ?, host = ?, port = ?, username = ?, project_path = ?,
+             repo_url = ?, branch = ?, install_cmd = ?, build_cmd = ?, restart_cmd = ?, auto_deploy = ?${tokenEnc ? ', repo_token = ?' : ''} WHERE id = ?`,
+            tokenEnc
+              ? [name || host, host, parseInt(port) || 22, username, project_path || null, repo_url || null, safeBranch, install_cmd || null, build_cmd || null, restart_cmd || null, auto, tokenEnc, id]
+              : [name || host, host, parseInt(port) || 22, username, project_path || null, repo_url || null, safeBranch, install_cmd || null, build_cmd || null, restart_cmd || null, auto, id]
           )
         }
         return res.status(200).json({ success: true, id: Number(id) })
@@ -94,8 +119,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Password is required for a new server' })
       }
       const result = await db.insert(
-        'INSERT INTO remote_deploy_configs (name, host, port, username, password_enc, project_path) VALUES (?, ?, ?, ?, ?, ?)',
-        [name || host, host, parseInt(port) || 22, username, encryptSecret(password), project_path || '/var/www/devtrack']
+        `INSERT INTO remote_deploy_configs (name, host, port, username, password_enc, project_path, repo_url, repo_token, branch, install_cmd, build_cmd, restart_cmd, auto_deploy)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [name || host, host, parseInt(port) || 22, username, encryptSecret(password), project_path || null, repo_url || null, tokenEnc, safeBranch, install_cmd || null, build_cmd || null, restart_cmd || null, auto]
       )
       return res.status(201).json({ success: true, id: result.insertId })
     } catch (err) {

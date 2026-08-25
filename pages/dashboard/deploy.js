@@ -3,6 +3,7 @@ import Layout from '@/components/layout/Layout'
 import { useAuth } from '@/components/AuthContext'
 import DiffViewer from '@/components/deploy/DiffViewer'
 import RemoteDeploy from '@/components/deploy/RemoteDeploy'
+import GitDeploy from '@/components/deploy/GitDeploy'
 import { io } from 'socket.io-client'
 
 const STATUS_COLORS = {
@@ -29,7 +30,7 @@ export default function DeployPage() {
   const [deployNote, setDeployNote] = useState('')
   const [deploying, setDeploying] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('changes')
+  const [tab, setTab] = useState('git')
   const [backupStats, setBackupStats] = useState(null)
   const [diffFile, setDiffFile] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -285,6 +286,9 @@ export default function DeployPage() {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-700">
+          <button onClick={() => setTab('git')} className={`px-4 py-2 text-sm font-medium transition-colors ${tab === 'git' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-500 hover:text-white'}`}>
+            <i className="fa-brands fa-git-alt mr-1"></i>Git Deploy
+          </button>
           <button onClick={() => setTab('changes')} className={`px-4 py-2 text-sm font-medium transition-colors ${tab === 'changes' ? 'text-indigo-400 border-b-2 border-indigo-400' : 'text-gray-500 hover:text-white'}`}>
             <i className="fa-solid fa-code-compare mr-1"></i>Changes ({filteredFiles.length})
           </button>
@@ -298,6 +302,8 @@ export default function DeployPage() {
 
         {loading ? (
           <div className="flex justify-center py-12"><i className="fa-solid fa-spinner fa-spin text-gray-500 text-xl"></i></div>
+        ) : tab === 'git' ? (
+          <GitDeploy showToast={(type, message) => addToast(message, type)} />
         ) : tab === 'remote' ? (
           <RemoteDeploy />
         ) : tab === 'changes' ? (
