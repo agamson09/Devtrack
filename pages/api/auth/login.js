@@ -62,6 +62,13 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 
+    // SSO-only account (no local password set)
+    if (!user.password) {
+      const providerLabel = { google: 'Google', github: 'GitHub', oidc: 'SSO' }[user.auth_provider] || 'SSO'
+      await logSecurityEvent(user.id, 'login_failed', `Password login attempted on SSO account (${user.auth_provider})`, req, 'low', { email })
+      return res.status(401).json({ error: `Akun ini menggunakan login ${providerLabel}. Silakan masuk lewat tombol ${providerLabel} di bawah.` })
+    }
+
     const validPassword = await bcrypt.compare(password, user.password)
 
     if (!validPassword) {

@@ -3,6 +3,17 @@ import { useRouter } from 'next/router'
 import { useAuth } from '@/components/AuthContext'
 import { useToast } from '@/components/ToastContext'
 
+const SSO_ERRORS = {
+  sso_not_configured: 'Provider SSO belum dikonfigurasi di server.',
+  sso_config: 'Konfigurasi SSO di server bermasalah. Hubungi admin.',
+  sso_state: 'Sesi login SSO kedaluwarsa. Coba lagi.',
+  sso_failed: 'Login SSO gagal. Coba lagi.',
+  sso_no_email: 'Provider tidak memberikan akses email — izinkan akses email lalu coba lagi.',
+  sso_email_unverified: 'Email di provider lo belum terverifikasi. Verifikasi dulu, lalu coba lagi.',
+}
+
+const SSO_LABELS = { google: 'Google', github: 'GitHub', oidc: 'SSO Perusahaan' }
+
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
@@ -11,6 +22,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [branding, setBranding] = useState({ appName: 'DevTrack', logo: '', loginBg: '', primaryColor: '#6366f1' })
+  const [ssoProviders, setSsoProviders] = useState([])
 
   // 2FA state
   const [twoFARequired, setTwoFARequired] = useState(false)
@@ -32,6 +44,21 @@ export default function LoginPage() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    fetch('/api/auth/oauth/providers')
+      .then(r => r.json())
+      .then(d => setSsoProviders(d.providers || []))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const err = router.query.error
+    if (err && String(err).startsWith('sso')) {
+      showToast('error', SSO_ERRORS[err] || 'Login SSO gagal. Coba lagi.')
+      router.replace('/login', undefined, { shallow: true })
+    }
+  }, [router.query.error])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -119,12 +146,10 @@ export default function LoginPage() {
               <img src={branding.logo} alt={branding.appName} className="h-16 w-auto drop-shadow-lg" />
             ) : (
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-glow"
+                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-glow overflow-hidden"
                 style={{ background: `linear-gradient(135deg, ${branding.primaryColor}, ${branding.primaryColor}aa)` }}
               >
-                <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
+                <img src="/favicon-white.webp" alt={branding.appName} className="w-12 h-12 object-contain" />
               </div>
             )}
           </div>
@@ -135,6 +160,12 @@ export default function LoginPage() {
         </div>
 
         <div className="glass-panel p-8">
+          {router.query.error && String(router.query.error).startsWith('sso') && (
+            <div className="mb-5 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-300">
+              <i className="fa-solid fa-circle-exclamation mr-2"></i>
+              {SSO_ERRORS[router.query.error] || 'Login SSO gagal. Coba lagi.'}
+            </div>
+          )}
           {!twoFARequired ? (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -251,6 +282,30 @@ export default function LoginPage() {
                 Back to login
               </button>
             </form>
+          )}
+
+          {!twoFARequired && ssoProviders.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 my-6">
+                <div className="h-px bg-gray-700 flex-1" />
+                <span className="text-xs text-gray-500">atau lanjut dengan</span>
+                <div className="h-px bg-gray-700 flex-1" />
+              </div>
+              <div className="space-y-2.5">
+                {ssoProviders.map((p) => (
+                  <a
+                    key={p}
+                    href={`/api/auth/oauth/${p}`}
+                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-gray-700/50 hover:bg-gray-600/70 border border-gray-600 text-white text-sm font-medium transition-colors"
+                  >
+                    {p === 'google' && <i className="fa-brands fa-google text-[#EA4335] text-base"></i>}
+                    {p === 'github' && <i className="fa-brands fa-github text-lg"></i>}
+                    {p === 'oidc' && <i className="fa-solid fa-building-columns"></i>}
+                    Lanjut dengan {SSO_LABELS[p] || p}
+                  </a>
+                ))}
+              </div>
+            </>
           )}
 
           <div className="mt-6 pt-5 border-t border-gray-700/60 text-center">

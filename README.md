@@ -467,6 +467,27 @@ Full schema available in [`schema.sql`](schema.sql).
 
 ---
 
+## 🔐 SSO / OAuth Login
+
+DevTrack supports "Sign in with" flows alongside password login. Providers are enabled automatically when their credentials are present in `.env.local` — no code changes needed.
+
+| Provider | Env vars | Setup |
+|----------|----------|-------|
+| **Google** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth client ID (Web) |
+| **GitHub** | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | [GitHub OAuth Apps](https://github.com/settings/developers) |
+| **Any OIDC** (Azure AD/Entra ID, Keycloak, Authentik, ...) | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | Point `OIDC_ISSUER` at your realm/tenant URL |
+
+Set each provider's **callback URL** to `{NEXT_PUBLIC_APP_URL}/api/auth/oauth/{provider}/callback`.
+
+Behavior:
+
+- Accounts are auto-linked by **verified email** — logging in with Google/GitHub using the same email attaches the identity to the existing DevTrack account.
+- New users get an account created automatically (role `member`).
+- SSO accounts have no local password; password login is rejected with a hint to use the provider button.
+- Anti-CSRF `state` (signed JWT, 10-minute TTL) protects the flow; sessions, security logs, and CSRF tokens work identically to password login.
+
+---
+
 ## 🚢 Deployment
 
 ### Production Setup (Ubuntu + PM2)
