@@ -158,7 +158,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
       )}
 
       <aside
-        className={`fixed top-0 left-0 h-full z-50 bg-gray-800/95 backdrop-blur-xl border-r border-gray-700/70 flex flex-col transition-all duration-300 ease-out-expo
+        className={`force-dark fixed top-0 left-0 h-full z-50 bg-gray-800/95 backdrop-blur-xl border-r border-gray-700/70 flex flex-col transition-all duration-300 ease-out-expo
           ${collapsed ? 'w-[4.5rem]' : 'w-64'}
           ${isOpen ? 'translate-x-0 shadow-panel lg:shadow-none' : '-translate-x-full lg:translate-x-0'}
         `}

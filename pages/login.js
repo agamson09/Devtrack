@@ -115,7 +115,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      className="force-dark min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={branding.loginBg ? {
         backgroundImage: `url(${branding.loginBg})`,
         backgroundSize: 'cover',
