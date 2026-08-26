@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     ])
 
     // Get new tenant settings
-    const [settings] = await db.query(
+    const settings = await db.query(
       'SELECT setting_key, setting_value FROM tenant_settings WHERE tenant_id = ?',
       [tenantId]
     )
