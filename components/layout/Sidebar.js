@@ -41,6 +41,7 @@ const navSections = [
         ],
       },
       { label: 'Server Monitor', href: '/dashboard/server-monitor', icon: 'fa-server', adminOnly: true },
+      { label: 'Uptime', href: '/dashboard/uptime', icon: 'fa-signal', adminOnly: true },
     ],
   },
   {

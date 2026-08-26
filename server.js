@@ -1640,6 +1640,14 @@ app.prepare().then(() => {
     }
   })()
 
+  // Uptime monitor sweep — checks due external URL monitors every 30s
+  setInterval(() => {
+    require('./lib/uptimeMonitor').checkDueMonitors().catch(() => {});
+  }, 30000);
+  setTimeout(() => {
+    require('./lib/uptimeMonitor').checkDueMonitors().catch(() => {});
+  }, 5000);
+
   server.listen(port, hostname, () => {
     const protocol = fs.existsSync('/var/www/devtrack/cert.pem') ? 'https' : 'http'
     logger.info('Server ready', { protocol, hostname, port })
