@@ -167,7 +167,7 @@ body {
 
 
 /* ============================================================
-   LIGHT THEME — activated via html.light (toggle in Header)
+   LIGHT THEME - activated via html.light (toggle in Header)
    Remaps the dark utility palette to light equivalents.
    ============================================================ */
 html.light body { background-color: #f3f4f6; color: #111827; }
