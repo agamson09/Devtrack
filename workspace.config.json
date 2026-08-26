@@ -6,6 +6,18 @@
       "slug": "default",
       "database": "devtrack",
       "url": "http://localhost:3000"
+    },
+    "kantor-cabang-mt9zrtrz": {
+      "name": "Kantor Cabang",
+      "slug": "kantor-cabang-mt9zrtrz",
+      "database": "kantor_cabang_devtrack",
+      "url": "http://localhost:3000"
+    },
+    "kantor-cabang-mt9zrviv": {
+      "name": "Kantor Cabang",
+      "slug": "kantor-cabang-mt9zrviv",
+      "database": "kantor_cabang_2_devtrack",
+      "url": "http://localhost:3000"
     }
   }
 }
