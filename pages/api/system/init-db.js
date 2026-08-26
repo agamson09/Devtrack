@@ -17,6 +17,7 @@ const SKIPPED_MIGRATIONS = ['add_performance_indexes.sql'];
 const ORDERED_MIGRATIONS = [
   'scripts/workspace_schema_migration.sql',
   'scripts/messages_upgrade_migration.sql',
+  'scripts/deploy_tables_upgrade_migration.sql',
   'scripts/group_chat_migration.sql',
   'scripts/tenant_migration.sql',
   'scripts/tenant_users_migration.sql',

@@ -1,4 +1,4 @@
--- DevTrack Workspace Database Schema
+﻿-- DevTrack Workspace Database Schema
 -- This schema is applied to each new workspace database
 -- NOTE: Database must already exist before running this
 
@@ -187,25 +187,8 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS deploy_backups (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(200) NOT NULL,
-  filename VARCHAR(255) NOT NULL,
-  filepath VARCHAR(500) NOT NULL,
-  filesize INT DEFAULT 0,
-  created_by INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS deploy_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  project_id INT DEFAULT NULL,
-  action VARCHAR(100) NOT NULL,
-  status ENUM('success', 'failed', 'pending') DEFAULT 'pending',
-  details TEXT,
-  created_by INT DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- NOTE: deploy_backups & deploy_logs are created by
+-- deploy_tables_upgrade_migration.sql (current schema).
 
 CREATE TABLE IF NOT EXISTS remote_deploy_configs (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -221,24 +204,9 @@ CREATE TABLE IF NOT EXISTS remote_deploy_configs (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS file_activity_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT DEFAULT NULL,
-  filename VARCHAR(255) NOT NULL,
-  action ENUM('upload', 'download', 'delete', 'view') NOT NULL,
-  filepath VARCHAR(500) DEFAULT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- NOTE: file_activity_logs is created by deploy_tables_upgrade_migration.sql.
 
-CREATE TABLE IF NOT EXISTS modules (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  slug VARCHAR(100) NOT NULL UNIQUE,
-  description TEXT,
-  is_enabled TINYINT(1) DEFAULT 1,
-  sort_order INT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- NOTE: modules is created by deploy_tables_upgrade_migration.sql (is_active).
 
 CREATE TABLE IF NOT EXISTS it_inventory (
   id INT AUTO_INCREMENT PRIMARY KEY,
