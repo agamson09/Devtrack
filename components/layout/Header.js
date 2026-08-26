@@ -93,6 +93,11 @@ export default function Header({ onToggleSidebar }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [themeIcon, setThemeIcon] = useState('dark')
+
+  useEffect(() => {
+    setThemeIcon(document.documentElement.classList.contains('light') ? 'light' : 'dark')
+  }, [])
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifFilter, setNotifFilter] = useState('all')
@@ -233,6 +238,21 @@ export default function Header({ onToggleSidebar }) {
               Ctrl K
             </kbd>
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => {
+              const next = document.documentElement.classList.contains('light') ? 'dark' : 'light'
+              document.documentElement.classList.toggle('light', next === 'light')
+              try { localStorage.setItem('devtrack_theme', next) } catch {}
+              setThemeIcon(next)
+            }}
+            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            aria-label="Toggle theme"
+            title={themeIcon === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            <i className={`fa-solid ${themeIcon === 'light' ? 'fa-moon' : 'fa-sun'} text-lg`}></i>
+          </button>
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>

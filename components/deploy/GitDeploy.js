@@ -25,6 +25,7 @@ export default function GitDeploy({ showToast }) {
   const [deploySteps, setDeploySteps] = useState([]);
   const [deployResult, setDeployResult] = useState(null);
   const [deploying, setDeploying] = useState(false);
+  const [deployMode, setDeployMode] = useState('deploy'); // deploy | rollback
 
   const active = configs.find(c => String(c.id) === String(activeId)) || null;
 
@@ -134,10 +135,11 @@ export default function GitDeploy({ showToast }) {
     fetchConfigs();
   }
 
-  async function runDeploy() {
+  async function runDeploy(rollbackCommit = null) {
     if (!activeId || deploying) return;
     setDeploying(true);
     setDeployOpen(true);
+    setDeployMode(rollbackCommit ? 'rollback' : 'deploy');
     setDeploySteps([]);
     setDeployResult(null);
     let socket = null;
@@ -148,10 +150,12 @@ export default function GitDeploy({ showToast }) {
           setDeploySteps(prev => [...prev, e.step]);
         }
       });
+      const body = { id: activeId };
+      if (rollbackCommit) body.rollback_commit = rollbackCommit;
       const res = await fetch('/api/deploy/git-deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: activeId }),
+        body: JSON.stringify(body),
       });
       const d = await res.json();
       setDeployResult({ ok: res.ok, ...d });
@@ -163,6 +167,16 @@ export default function GitDeploy({ showToast }) {
     } finally {
       setDeploying(false);
       socket?.disconnect();
+    }
+  }
+
+  function handleRollback(row) {
+    if (!row.commit_before) {
+      showToast?.('error', 'Commit sebelum deploy tidak tercatat untuk entry ini');
+      return;
+    }
+    if (confirm(`Rollback ke commit ${String(row.commit_before).slice(0, 7)}? Server akan di-reset ke commit tersebut lalu build & restart ulang.`)) {
+      runDeploy(row.commit_before);
     }
   }
 
@@ -276,6 +290,13 @@ export default function GitDeploy({ showToast }) {
                     <span className="text-gray-600 flex-1 truncate">{h.note || ''}</span>
                     <span className="text-gray-600 flex-shrink-0">{h.deployed_by_name || 'webhook'}</span>
                     <span className="text-gray-600 flex-shrink-0">{new Date(h.created_at).toLocaleString('id-ID')}</span>
+                    {h.status === 'deployed' && h.commit_before && (
+                      <button onClick={() => handleRollback(h)}
+                        className="text-amber-400 hover:text-amber-300 p-1 flex-shrink-0"
+                        title={`Rollback ke ${String(h.commit_before).slice(0, 7)}`}>
+                        <i className="fa-solid fa-rotate-left"></i>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -289,7 +310,10 @@ export default function GitDeploy({ showToast }) {
         <div className="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
             <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-white font-bold"><i className="fa-solid fa-rocket mr-2 text-indigo-400"></i>Git Deploy — {active?.name}</h3>
+              <h3 className="text-white font-bold">
+                <i className={`fa-solid ${deployMode === 'rollback' ? 'fa-rotate-left text-amber-400' : 'fa-rocket text-indigo-400'} mr-2`}></i>
+                {deployMode === 'rollback' ? 'Rollback' : 'Git Deploy'} — {active?.name}
+              </h3>
               {!deploying && <button onClick={() => setDeployOpen(false)} className="text-gray-400 hover:text-white">&times;</button>}
             </div>
             <div className="p-5 space-y-2 font-mono text-xs">

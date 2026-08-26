@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import Loading from '@/components/common/Loading';
-import { Server, Cpu, HardDrive, MemoryStick, Activity, Database, Wifi, RefreshCw } from 'lucide-react';
+import { Server, Cpu, HardDrive, MemoryStick, Activity, Database, Wifi, RefreshCw, Bell, ChevronDown, ChevronRight } from 'lucide-react';
 
 function MetricCard({ icon: Icon, label, value, sub, color, percent }) {
   return (
@@ -48,6 +48,38 @@ export default function ServerMonitorPage() {
   const [connections, setConnections] = useState([]);
   const [activeConn, setActiveConn] = useState('local');
   const [error, setError] = useState(null);
+  const [alertSettings, setAlertSettings] = useState(null);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [savingAlert, setSavingAlert] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/system/alert-settings')
+      .then(r => r.json())
+      .then(setAlertSettings)
+      .catch(() => {});
+  }, []);
+
+  async function saveAlertSettings() {
+    setSavingAlert(true);
+    try {
+      const res = await fetch('/api/system/alert-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alertSettings),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setAlertSettings(d.settings);
+        alert('Pengaturan alert tersimpan');
+      } else {
+        alert(d.error || 'Save failed');
+      }
+    } catch {
+      alert('Save failed');
+    } finally {
+      setSavingAlert(false);
+    }
+  }
 
   useEffect(() => {
     fetch('/api/deploy/remote-config')
@@ -134,6 +166,75 @@ export default function ServerMonitorPage() {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Alert settings */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+          <button
+            onClick={() => setAlertOpen(!alertOpen)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-semibold text-white">Alert Settings</span>
+              {alertSettings?.enabled ? (
+                <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-1.5 py-0.5 rounded-full">ON</span>
+              ) : (
+                <span className="text-[10px] bg-gray-500/10 border border-gray-500/30 text-gray-400 px-1.5 py-0.5 rounded-full">OFF</span>
+              )}
+            </div>
+            {alertOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+          </button>
+          {alertOpen && alertSettings && (
+            <div className="px-4 pb-4 space-y-3 border-t border-gray-700">
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer pt-3">
+                <input
+                  type="checkbox"
+                  checked={!!alertSettings.enabled}
+                  onChange={(e) => setAlertSettings({ ...alertSettings, enabled: e.target.checked })}
+                  className="accent-indigo-500 w-4 h-4"
+                />
+                Aktifkan notifikasi Telegram saat metrik melewati batas
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { key: 'cpu_threshold', label: 'CPU %' },
+                  { key: 'memory_threshold', label: 'Memory %' },
+                  { key: 'disk_threshold', label: 'Disk %' },
+                  { key: 'cooldown_minutes', label: 'Cooldown (menit)' },
+                ].map((f) => (
+                  <div key={f.key}>
+                    <label className="block text-[10px] text-gray-500 mb-1">{f.label}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={alertSettings[f.key] ?? ''}
+                      onChange={(e) => setAlertSettings({ ...alertSettings, [f.key]: e.target.value })}
+                      className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Telegram Chat ID (pisah koma; kosong = kirim ke semua admin yang punya chat ID)</label>
+                <input
+                  value={alertSettings.telegram_chat_id || ''}
+                  onChange={(e) => setAlertSettings({ ...alertSettings, telegram_chat_id: e.target.value })}
+                  placeholder="123456789, 987654321"
+                  className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={saveAlertSettings}
+                  disabled={savingAlert}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  {savingAlert ? 'Saving...' : 'Save Alert Settings'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (

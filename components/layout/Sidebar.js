@@ -166,9 +166,21 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
         {/* Logo */}
         <div className="flex items-center h-16 px-4 border-b border-gray-700/70 flex-shrink-0 justify-center">
           {collapsed ? (
-            <img src={tenantSettings?.logo_icon_url || '/favicon-white.webp'} alt={tenantSettings?.app_name || 'DevTrack'} className="h-9 w-9 flex-shrink-0" />
+            tenantSettings?.logo_icon_url ? (
+              <img src={tenantSettings.logo_icon_url} alt={tenantSettings?.app_name || 'DevTrack'} className="h-9 w-9 flex-shrink-0" />
+            ) : (
+              <>
+                <img src="/favicon-white.webp" alt={tenantSettings?.app_name || 'DevTrack'} className="h-9 w-9 flex-shrink-0 theme-logo-dark" />
+                <img src="/favicon.webp" alt={tenantSettings?.app_name || 'DevTrack'} className="h-9 w-9 flex-shrink-0 theme-logo-light" />
+              </>
+            )
+          ) : tenantSettings?.logo_url ? (
+            <img src={tenantSettings.logo_url} alt={tenantSettings?.app_name || 'DevTrack'} className="h-8 w-auto flex-shrink-0" />
           ) : (
-            <img src={tenantSettings?.logo_url || '/favicon-white.webp'} alt={tenantSettings?.app_name || 'DevTrack'} className="h-8 w-auto flex-shrink-0" />
+            <>
+              <img src="/favicon-white.webp" alt={tenantSettings?.app_name || 'DevTrack'} className="h-8 w-auto flex-shrink-0 theme-logo-dark" />
+              <img src="/favicon.webp" alt={tenantSettings?.app_name || 'DevTrack'} className="h-8 w-auto flex-shrink-0 theme-logo-light" />
+            </>
           )}
 
           <button

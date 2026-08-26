@@ -4,6 +4,11 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{if(localStorage.getItem('devtrack_theme')==='light')document.documentElement.classList.add('light')}catch(e){}",
+          }}
+        />
         <link rel="stylesheet" href="/fonts/all.min.css" />
         <link rel="icon" type="image/webp" href="/favicon.webp" />
         <link rel="shortcut icon" type="image/webp" href="/favicon.webp" />

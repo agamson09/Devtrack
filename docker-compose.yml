@@ -1,0 +1,48 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:-devtrack_secret}
+      - DB_NAME=devtrack
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${DB_PASSWORD:-devtrack_secret}
+      - JWT_SECRET=${JWT_SECRET:-change-this-to-a-long-random-string}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:3000}
+      - IT_VAULT_KEY=${IT_VAULT_KEY:-change-this-vault-key}
+    volumes:
+      - app_uploads:/app/public/uploads
+      - app_backups:/var/backups/mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-devtrack_secret}
+      - MYSQL_DATABASE=devtrack
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-devtrack_secret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  app_uploads:
+  app_backups:

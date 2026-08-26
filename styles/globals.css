@@ -164,3 +164,69 @@ body {
     animation: none;
   }
 }
+
+
+/* ============================================================
+   LIGHT THEME — activated via html.light (toggle in Header)
+   Remaps the dark utility palette to light equivalents.
+   ============================================================ */
+html.light body { background-color: #f3f4f6; color: #111827; }
+html.light ::selection { background: rgb(99 102 241 / 0.25); color: #111827; }
+html.light ::-webkit-scrollbar-thumb { background: #d1d5db; border-color: #f3f4f6; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* surfaces */
+html.light [class*="bg-gray-950"] { background-color: #f9fafb !important; }
+html.light [class*="bg-gray-900"] { background-color: #f9fafb !important; }
+html.light [class*="bg-gray-800"] { background-color: #ffffff !important; }
+html.light [class*="bg-gray-700"] { background-color: #e5e7eb !important; }
+
+/* text */
+html.light [class*="text-white"] { color: #111827 !important; }
+html.light [class*="text-gray-100"] { color: #111827 !important; }
+html.light [class*="text-gray-200"] { color: #1f2937 !important; }
+html.light [class*="text-gray-300"] { color: #374151 !important; }
+html.light [class*="text-gray-400"] { color: #4b5563 !important; }
+html.light [class*="text-gray-500"] { color: #6b7280 !important; }
+html.light [class*="text-gray-600"] { color: #4b5563 !important; }
+
+/* keep white text on colored surfaces */
+html.light [class*="bg-indigo-6"], html.light [class*="bg-emerald-6"], html.light [class*="bg-green-6"],
+html.light [class*="bg-red-6"], html.light [class*="bg-rose-6"], html.light [class*="bg-amber-6"],
+html.light [class*="bg-orange-6"], html.light [class*="bg-blue-6"], html.light [class*="bg-purple-6"],
+html.light [class*="bg-gradient-to-"], html.light [style*="linear-gradient"] { color: #ffffff !important; }
+
+/* colored text: darker shades for white backgrounds */
+html.light [class*="text-indigo-3"], html.light [class*="text-indigo-4"] { color: #4f46e5 !important; }
+html.light [class*="text-emerald-3"], html.light [class*="text-emerald-4"] { color: #047857 !important; }
+html.light [class*="text-green-3"], html.light [class*="text-green-4"] { color: #047857 !important; }
+html.light [class*="text-red-3"], html.light [class*="text-red-4"] { color: #dc2626 !important; }
+html.light [class*="text-rose-3"], html.light [class*="text-rose-4"] { color: #be123c !important; }
+html.light [class*="text-amber-3"], html.light [class*="text-amber-4"] { color: #b45309 !important; }
+html.light [class*="text-orange-3"], html.light [class*="text-orange-4"] { color: #c2410c !important; }
+html.light [class*="text-sky-3"], html.light [class*="text-sky-4"] { color: #0369a1 !important; }
+html.light [class*="text-blue-3"], html.light [class*="text-blue-4"] { color: #1d4ed8 !important; }
+html.light [class*="text-purple-3"], html.light [class*="text-purple-4"] { color: #7e22ce !important; }
+html.light [class*="text-yellow-3"], html.light [class*="text-yellow-4"] { color: #a16207 !important; }
+
+/* borders */
+html.light [class*="border-gray-800"] { border-color: #f3f4f6 !important; }
+html.light [class*="border-gray-700"] { border-color: #e5e7eb !important; }
+html.light [class*="border-gray-600"] { border-color: #d1d5db !important; }
+
+/* placeholders */
+html.light input::placeholder, html.light textarea::placeholder { color: #9ca3af !important; }
+
+/* custom component classes */
+html.light .glass-panel { background: rgba(255, 255, 255, 0.92); border-color: #e5e7eb; }
+html.light .card, html.light .card-hover { background: rgba(255, 255, 255, 0.85); border-color: #e5e7eb; }
+html.light .input-field { background-color: #ffffff; border-color: #d1d5db; color: #111827; }
+html.light .btn-secondary { background-color: #e5e7eb; color: #111827; }
+html.light .btn-secondary:hover { background-color: #d1d5db; }
+html.light .gradient-text { background-image: linear-gradient(to right, #111827, #312e81, #4f46e5); }
+html.light .section-label { color: #6b7280; }
+
+/* per-theme logo swap */
+.theme-logo-light { display: none; }
+html.light .theme-logo-light { display: block; }
+html.light .theme-logo-dark { display: none; }

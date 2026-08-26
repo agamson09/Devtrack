@@ -2,6 +2,7 @@ import { getAuthUser } from '@/lib/auth';
 import db from '@/lib/db';
 import { getStatusRemote } from '@/lib/sshMonitor';
 import { getLocalStatus } from '@/lib/systemStatus';
+import { checkAlerts } from '@/lib/serverAlerts';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -20,11 +21,13 @@ export default async function handler(req, res) {
       const config = await db.queryOne('SELECT * FROM remote_deploy_configs WHERE id = ?', [connId]);
       if (!config) return res.status(404).json({ error: 'Server not found' });
       const status = await getStatusRemote(config);
+      checkAlerts(status).catch(() => {});
       return res.status(200).json(status);
     }
 
     // ---- Local server (cross-platform: Linux/macOS/Windows) ----
     const status = await getLocalStatus();
+    checkAlerts(status).catch(() => {});
     return res.status(200).json(status);
   } catch (err) {
     console.error('System status error:', err);
