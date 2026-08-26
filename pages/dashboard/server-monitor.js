@@ -45,23 +45,39 @@ export default function ServerMonitorPage() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [connections, setConnections] = useState([]);
+  const [activeConn, setActiveConn] = useState('local');
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/deploy/remote-config')
+      .then(r => r.json())
+      .then(d => setConnections(d.configs || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeConn]);
 
   async function fetchStatus() {
     try {
-      const res = await fetch('/api/system/status');
+      const qs = activeConn !== 'local' ? `?connection_id=${activeConn}` : '';
+      const res = await fetch('/api/system/status' + qs);
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
+        setError(null);
         setLastRefresh(new Date());
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || 'Monitoring failed');
       }
     } catch (err) {
       console.error('Failed to fetch status:', err);
+      setError('Failed to fetch status');
     } finally {
       setLoading(false);
     }
@@ -102,6 +118,29 @@ export default function ServerMonitorPage() {
             </button>
           </div>
         </div>
+
+        {/* Connection bar */}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-xs text-gray-400 uppercase font-semibold whitespace-nowrap">Server</span>
+            <select
+              value={String(activeConn)}
+              onChange={(e) => setActiveConn(e.target.value === 'local' ? 'local' : Number(e.target.value))}
+              className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 min-w-0"
+            >
+              <option value="local">🏠 Local server (DevTrack)</option>
+              {connections.map(c => (
+                <option key={c.id} value={c.id}>{c.name} — {c.username}@{c.host}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-300">
+            <i className="fa-solid fa-circle-exclamation mr-2"></i>{error}
+          </div>
+        )}
 
         {status && (
           <>
@@ -147,24 +186,28 @@ export default function ServerMonitorPage() {
                   <Database className="w-5 h-5 text-indigo-400" />
                   <h2 className="text-lg font-semibold text-white">MySQL Database</h2>
                 </div>
+                {!status.mysql ? (
+                  <p className="text-xs text-gray-500 py-6 text-center">MySQL info not available on this target.</p>
+                ) : (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Database Size</p>
-                    <p className="text-2xl font-bold text-white">{formatBytes(status.mysql.size_mb)}</p>
+                    <p className="text-2xl font-bold text-white">{status.mysql.size_mb != null ? formatBytes(status.mysql.size_mb) : '—'}</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Tables</p>
-                    <p className="text-2xl font-bold text-white">{status.mysql.tables}</p>
+                    <p className="text-2xl font-bold text-white">{status.mysql.tables ?? '—'}</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Connections</p>
-                    <p className="text-2xl font-bold text-white">{status.mysql.connections}</p>
+                    <p className="text-2xl font-bold text-white">{status.mysql.connections ?? '—'}</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Version</p>
-                    <p className="text-sm font-medium text-white">{status.mysql.version.split(' ')[2] || status.mysql.version}</p>
+                    <p className="text-sm font-medium text-white break-all">{status.mysql.version?.split(' ')[2] || status.mysql.version || '—'}</p>
                   </div>
                 </div>
+                )}
               </div>
 
               <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
@@ -175,15 +218,15 @@ export default function ServerMonitorPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Node.js</p>
-                    <p className="text-sm font-medium text-white">{status.nodeVersion}</p>
+                    <p className="text-sm font-medium text-white">{status.nodeVersion || '—'}</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Network RX</p>
-                    <p className="text-sm font-medium text-white">{status.network.rx_mb} MB</p>
+                    <p className="text-sm font-medium text-white">{status.network?.rx_mb ?? '—'} MB</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Network TX</p>
-                    <p className="text-sm font-medium text-white">{status.network.tx_mb} MB</p>
+                    <p className="text-sm font-medium text-white">{status.network?.tx_mb ?? '—'} MB</p>
                   </div>
                   <div className="bg-gray-700/50 rounded-lg p-4">
                     <p className="text-xs text-gray-400">Processes</p>

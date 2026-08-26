@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth';
 import { execSync } from 'child_process';
 import db from '@/lib/db';
+import { getStatusRemote } from '@/lib/sshMonitor';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,6 +11,20 @@ export default async function handler(req, res) {
   const user = await getAuthUser(req);
   if (!user || user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin access required' });
+  }
+
+  // ---- Remote target (saved SSH server) ----
+  const connId = req.query.connection_id;
+  if (connId && connId !== 'local') {
+    try {
+      const config = await db.queryOne('SELECT * FROM remote_deploy_configs WHERE id = ?', [connId]);
+      if (!config) return res.status(404).json({ error: 'Server not found' });
+      const status = await getStatusRemote(config);
+      return res.status(200).json(status);
+    } catch (err) {
+      console.error('Remote status error:', err.message);
+      return res.status(400).json({ error: 'Remote monitoring failed: ' + err.message });
+    }
   }
 
   try {
