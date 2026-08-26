@@ -3,6 +3,7 @@ import db from '@/lib/db';
 import { getStatusRemote } from '@/lib/sshMonitor';
 import { getLocalStatus } from '@/lib/systemStatus';
 import { checkAlerts } from '@/lib/serverAlerts';
+import { recordSample, getHistory } from '@/lib/metricsHistory';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -15,6 +16,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ---- Historical samples for charts ----
+    if (req.query.history !== undefined) {
+      const targetId = req.query.connection_id || 'local';
+      const history = await getHistory(targetId, req.query.hours || 24);
+      return res.status(200).json({ history });
+    }
+
     // ---- Remote target (saved SSH server) ----
     const connId = req.query.connection_id;
     if (connId && connId !== 'local') {
@@ -22,12 +30,14 @@ export default async function handler(req, res) {
       if (!config) return res.status(404).json({ error: 'Server not found' });
       const status = await getStatusRemote(config);
       checkAlerts(status).catch(() => {});
+      recordSample(status);
       return res.status(200).json(status);
     }
 
     // ---- Local server (cross-platform: Linux/macOS/Windows) ----
     const status = await getLocalStatus();
     checkAlerts(status).catch(() => {});
+    recordSample(status);
     return res.status(200).json(status);
   } catch (err) {
     console.error('System status error:', err);

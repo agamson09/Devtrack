@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import Layout from '@/components/layout/Layout';
 import Loading from '@/components/common/Loading';
-import { Server, Cpu, HardDrive, MemoryStick, Activity, Database, Wifi, RefreshCw, Bell, ChevronDown, ChevronRight } from 'lucide-react';
+import { Server, Cpu, HardDrive, MemoryStick, Activity, Database, Wifi, RefreshCw, Bell, ChevronDown, ChevronRight, ChartLine } from 'lucide-react';
 
 function MetricCard({ icon: Icon, label, value, sub, color, percent }) {
   return (
@@ -51,6 +52,8 @@ export default function ServerMonitorPage() {
   const [alertSettings, setAlertSettings] = useState(null);
   const [alertOpen, setAlertOpen] = useState(false);
   const [savingAlert, setSavingAlert] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyHours, setHistoryHours] = useState(24);
 
   useEffect(() => {
     fetch('/api/system/alert-settings')
@@ -93,6 +96,15 @@ export default function ServerMonitorPage() {
     const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
   }, [activeConn]);
+
+  useEffect(() => {
+    const params = new URLSearchParams({ history: '1', hours: historyHours });
+    if (activeConn !== 'local') params.set('connection_id', activeConn);
+    fetch('/api/system/status?' + params)
+      .then(r => r.json())
+      .then(d => setHistory(d.history || []))
+      .catch(() => setHistory([]));
+  }, [activeConn, historyHours]);
 
   async function fetchStatus() {
     try {
@@ -362,6 +374,47 @@ export default function ServerMonitorPage() {
                   </div>
                 ))}
               </div>
+            </div>
+            {/* Historical chart */}
+            <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <ChartLine className="w-5 h-5 text-indigo-400" />
+                  <h2 className="text-lg font-semibold text-white">Historical Metrics</h2>
+                </div>
+                <select
+                  value={historyHours}
+                  onChange={(e) => setHistoryHours(Number(e.target.value))}
+                  className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value={6}>Last 6 hours</option>
+                  <option value={24}>Last 24 hours</option>
+                  <option value={168}>Last 7 days</option>
+                  <option value={720}>Last 30 days</option>
+                </select>
+              </div>
+              {history.length < 2 ? (
+                <p className="text-xs text-gray-500 text-center py-8">
+                  Mengumpulkan data... sampel tersimpan otomatis tiap menit (maks. 30 hari).
+                </p>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={history.map((h) => ({ ...h, time: new Date(h.recorded_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }))}>
+                      <XAxis dataKey="time" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} minTickGap={40} />
+                      <YAxis domain={[0, 100]} stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} unit="%" />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 8, fontSize: 12 }}
+                        labelStyle={{ color: '#9ca3af' }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Line type="monotone" dataKey="cpu" name="CPU %" stroke="#818cf8" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="memory" name="Memory %" stroke="#c084fc" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="disk" name="Disk %" stroke="#fbbf24" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </>
         )}
