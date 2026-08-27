@@ -86,7 +86,7 @@ async function deploy() {
         
         // 5. Start with PM2
         await execCommand(conn, `cd ${remotePath} && pm2 delete devtrack || true`, true);
-        await execCommand(conn, `cd ${remotePath} && pm2 start npm --name "devtrack" -- run start`);
+        await execCommand(conn, `cd ${remotePath} && pm2 start server.js --name "devtrack"`);
         await execCommand(conn, `pm2 save`);
         await execCommand(conn, `env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root || true`, true);
         
