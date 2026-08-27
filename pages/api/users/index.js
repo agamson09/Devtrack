@@ -23,8 +23,12 @@ export default async function handler(req, res) {
 
       // Tenant scoping: only show users in same tenant
       if (tenantId) {
-        query += ` WHERE u.id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)`
-        params.push(tenantId)
+        // Check if this tenant has a custom DB
+        const customDb = await db.queryOne('SELECT id FROM workspace_databases WHERE tenant_id = ?', [tenantId])
+        if (!customDb) {
+          query += ` WHERE u.id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)`
+          params.push(tenantId)
+        }
       }
 
       query += ' ORDER BY u.name ASC'

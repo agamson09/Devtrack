@@ -40,8 +40,11 @@ export default async function handler(req, res) {
 
       // Tenant scoping: only show users in same tenant
       if (tenantId) {
-        query += ` AND u.id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)`
-        params.push(tenantId)
+        const customDb = await db.queryOne('SELECT id FROM workspace_databases WHERE tenant_id = ?', [tenantId])
+        if (!customDb) {
+          query += ` AND u.id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)`
+          params.push(tenantId)
+        }
       }
 
       query += ' ORDER BY m.created_at DESC'
@@ -69,11 +72,17 @@ export default async function handler(req, res) {
     try {
       // Verify receiver exists and is in same tenant
       if (tenantId) {
-        const receiver = await tenantQueryOne(
-          tenantId,
-          'SELECT id FROM users WHERE id = ? AND id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)',
-          [receiverId, tenantId]
-        )
+        const customDb = await db.queryOne('SELECT id FROM workspace_databases WHERE tenant_id = ?', [tenantId])
+        
+        let receiverQuery = 'SELECT id FROM users WHERE id = ?'
+        const receiverParams = [receiverId]
+        
+        if (!customDb) {
+          receiverQuery += ' AND id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)'
+          receiverParams.push(tenantId)
+        }
+        
+        const receiver = await tenantQueryOne(tenantId, receiverQuery, receiverParams)
         if (!receiver) {
           return res.status(404).json({ error: 'User not found in your organization' })
         }
