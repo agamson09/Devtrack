@@ -491,7 +491,7 @@ export default function ChatPage() {
     if (!socket || !user) return
     socket.on('chat:message', (msg) => {
       const chat = activeChatRef.current
-      if (chat && ((msg.sender_id === chat.id && chat.type !== 'group') || (msg.group_id == chat.id && chat.type === 'group'))) {
+      if (chat && ((chat.type !== 'group' && (msg.sender_id === chat.id || (msg.sender_id === user?.id && msg.receiver_id === chat.id))) || (chat.type === 'group' && msg.group_id == chat.id))) {
         setMessages(prev => { if (prev.find(m => m.id === msg.id)) return prev; return [...prev, msg] })
         if (isNearBottomRef.current) setTimeout(() => scrollToBottom(), 50)
         if (msg.sender_id !== user?.id) socket.emit('chat:mark-read', { messageId: msg.id })
