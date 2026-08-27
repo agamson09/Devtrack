@@ -77,16 +77,16 @@ const FEATURES = [
 ]
 
 const TECH = [
-  { name: 'Next.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nextjs/nextjs-original.svg' },
-  { name: 'React', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/react/react-original.svg' },
-  { name: 'Tailwind CSS', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg' },
-  { name: 'MySQL', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mysql/mysql-original.svg' },
-  { name: 'Socket.IO', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/socketio/socketio-original.svg' },
-  { name: 'Node.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg' },
-  { name: 'C#', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/csharp/csharp-original.svg' },
-  { name: 'Docker', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg' },
-  { name: 'Git', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/git/git-original.svg' },
-  { name: 'Nginx', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nginx/nginx-original.svg' },
+  { name: 'Next.js', icon: 'https://cdn.simpleicons.org/nextdotjs/white' },
+  { name: 'React', icon: 'https://cdn.simpleicons.org/react/61DAFB' },
+  { name: 'Tailwind CSS', icon: 'https://cdn.simpleicons.org/tailwindcss/06B6D4' },
+  { name: 'MySQL', icon: 'https://cdn.simpleicons.org/mysql/4479A1' },
+  { name: 'Socket.IO', icon: 'https://cdn.simpleicons.org/socketdotio/white' },
+  { name: 'Node.js', icon: 'https://cdn.simpleicons.org/nodedotjs/339933' },
+  { name: 'C#', icon: 'https://cdn.simpleicons.org/csharp/239120' },
+  { name: 'Docker', icon: 'https://cdn.simpleicons.org/docker/2496ED' },
+  { name: 'Git', icon: 'https://cdn.simpleicons.org/git/F05032' },
+  { name: 'Nginx', icon: 'https://cdn.simpleicons.org/nginx/009639' },
 ]
 
 const STATS = [
