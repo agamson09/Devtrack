@@ -19,6 +19,7 @@ export default function CommandPalette({ onClose }) {
   const listRef = useRef(null)
 
   const isAdmin = user?.role === 'admin'
+  const isSystemAdmin = user?.id === 1
   const isIT = isAdmin || user?.role === 'it_support'
 
   const commands = useMemo(() => {
@@ -44,7 +45,7 @@ export default function CommandPalette({ onClose }) {
         { icon: 'fa-key', label: 'Password Vault', hint: 'Kredensial terenkripsi', href: '/dashboard/it-support/passwords' }
       )
     }
-    if (isAdmin) {
+    if (isSystemAdmin) {
       nav.push(
         { icon: 'fa-user-gear', label: 'Admin Panel', hint: 'Kelola pengguna', href: '/dashboard/admin' },
         { icon: 'fa-terminal', label: 'Env Editor', hint: 'Variabel environment', href: '/dashboard/env-editor' }
