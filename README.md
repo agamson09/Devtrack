@@ -37,11 +37,6 @@
 **DevTrack** is a comprehensive project management and IT support platform designed for modern development teams. It combines agile task management, real-time collaboration, remote desktop access, server monitoring, and AI-powered assistance — all in a single, self-hosted application.
 
 Whether you're managing a small team or running an IT department, DevTrack provides the tools you need: Kanban boards, Gantt charts, calendars, chat, database management, terminal access, deploy pipelines, and remote desktop — with multi-tenant support and customizable branding.
-
-Link : https://devtrack.agamlabs.cloud/
-acoount dummy :
-user : budi@devtrack.com
-pass : Password@123
 ---
 
 ## ✨ Features
