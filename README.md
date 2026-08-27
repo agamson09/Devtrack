@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="public/screenshot.png" alt="DevTrack Dashboard Screenshot" width="800" />
+  <img src="public/screenshot.jpg" alt="DevTrack Dashboard Screenshot" width="800" />
 </p>
 
 <p align="center">
