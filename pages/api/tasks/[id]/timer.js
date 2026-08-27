@@ -1,5 +1,8 @@
 import { getAuthUser } from '@/lib/auth';
+import { getTenantFromRequest } from '@/lib/tenant';
 import db from '@/lib/db';
+
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove, tenantUpdate } = db;
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req);
@@ -7,11 +10,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
+
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const task = await db.queryOne(
+      const task = await tenantQueryOne(
+        tenantId,
         'SELECT timer_started_at, timer_accumulated_seconds, actual_hours FROM tasks WHERE id = ?',
         [id]
       );
@@ -42,7 +48,7 @@ export default async function handler(req, res) {
     const { action } = req.body;
 
     try {
-      const task = await db.queryOne('SELECT * FROM tasks WHERE id = ?', [id]);
+      const task = await tenantQueryOne(tenantId, 'SELECT * FROM tasks WHERE id = ?', [id]);
       if (!task) {
         return res.status(404).json({ error: 'Task not found' });
       }
@@ -55,7 +61,8 @@ export default async function handler(req, res) {
         if (task.timer_started_at) {
           return res.status(400).json({ error: 'Timer is already running' });
         }
-        await db.update(
+        await tenantUpdate(
+          tenantId,
           'UPDATE tasks SET timer_started_at = NOW(), updated_at = NOW() WHERE id = ?',
           [id]
         );
@@ -71,12 +78,14 @@ export default async function handler(req, res) {
         const totalAccumulated = (task.timer_accumulated_seconds || 0) + sessionSeconds;
         const totalHours = Math.round((totalAccumulated / 3600) * 100) / 100;
 
-        await db.update(
+        await tenantUpdate(
+          tenantId,
           'UPDATE tasks SET timer_started_at = NULL, timer_accumulated_seconds = ?, actual_hours = ?, updated_at = NOW() WHERE id = ?',
           [totalAccumulated, totalHours, id]
         );
 
-        await db.insert(
+        await tenantInsert(
+          tenantId,
           'INSERT INTO task_history (task_id, user_id, field_changed, old_value, new_value, changed_at) VALUES (?, ?, ?, ?, ?, NOW())',
           [id, user.id, 'timer', `${task.timer_accumulated_seconds || 0}s`, `${totalAccumulated}s`]
         );
@@ -90,7 +99,8 @@ export default async function handler(req, res) {
       }
 
       if (action === 'reset') {
-        await db.update(
+        await tenantUpdate(
+          tenantId,
           'UPDATE tasks SET timer_started_at = NULL, timer_accumulated_seconds = 0, updated_at = NOW() WHERE id = ?',
           [id]
         );

@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
 import { getTenantFromRequest } from '@/lib/tenant'
 import { validateData } from '@/lib/middleware'
 import { requireCSRF } from '@/lib/csrf'
@@ -17,11 +18,10 @@ function slugify(text) {
 async function uniqueSlug(base, tenantId) {
   let slug = base
   let n = 2
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const rows = tenantId
-      ? await db.query('SELECT id FROM wiki_notes WHERE slug = ? AND tenant_id = ?', [slug, tenantId])
-      : await db.query('SELECT id FROM wiki_notes WHERE slug = ? AND tenant_id IS NULL', [slug])
+      ? await tenantQuery(tenantId, 'SELECT id FROM wiki_notes WHERE slug = ? AND tenant_id = ?', [slug, tenantId])
+      : await tenantQuery(tenantId, 'SELECT id FROM wiki_notes WHERE slug = ? AND tenant_id IS NULL', [slug])
     if (rows.length === 0) return slug
     slug = `${base}-${n++}`
   }
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
       sql += ' ORDER BY w.updated_at DESC'
 
-      const notes = await db.query(sql, params)
+      const notes = await tenantQuery(tenantId, sql, params)
       return res.status(200).json({ notes })
     } catch (error) {
       console.error('List wiki notes error:', error)
@@ -82,7 +82,8 @@ export default async function handler(req, res) {
 
     try {
       const slug = await uniqueSlug(slugify(title), tenantId)
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         `INSERT INTO wiki_notes (project_id, title, slug, content, tags, created_by, tenant_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
@@ -96,12 +97,13 @@ export default async function handler(req, res) {
         ]
       )
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, tenant_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [user.id, 'created wiki note', 'wiki_note', result.insertId, tenantId]
       )
 
-      const note = await db.queryOne('SELECT * FROM wiki_notes WHERE id = ?', [result.insertId])
+      const note = await tenantQueryOne(tenantId, 'SELECT * FROM wiki_notes WHERE id = ?', [result.insertId])
       return res.status(201).json({ note })
     } catch (error) {
       console.error('Create wiki note error:', error)

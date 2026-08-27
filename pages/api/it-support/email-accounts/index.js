@@ -1,5 +1,7 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 const { encrypt } = require('@/lib/vault')
 
 export default async function handler(req, res) {
@@ -7,9 +9,11 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (user.role !== 'admin' && user.role !== 'it_support') return res.status(403).json({ error: 'Forbidden' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   if (req.method === 'GET') {
     try {
-      const accounts = await db.query(
+      const accounts = await tenantQuery(tenantId,
         `SELECT e.*, u.name as user_name FROM it_email_accounts e 
          LEFT JOIN users u ON e.user_id = u.id ORDER BY e.email`)
       accounts.forEach(a => { if (a.password) a.password = '[encrypted]' })
@@ -26,7 +30,7 @@ export default async function handler(req, res) {
 
     try {
       const encryptedPw = password ? encrypt(password) : null
-      const result = await db.insert('it_email_accounts', {
+      const result = await tenantInsert(tenantId, 'it_email_accounts', {
         email, user_id: user_id || null, provider, password: encryptedPw,
         status: status || 'active', created_date: created_date || null, notes,
       })

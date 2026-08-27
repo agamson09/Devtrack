@@ -1,10 +1,14 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+
+  const tenantId = await getTenantFromRequest(req)
 
   try {
     const { days = 365, user_id } = req.query
@@ -26,7 +30,7 @@ export default async function handler(req, res) {
 
     query += ' GROUP BY DATE(created_at) ORDER BY date ASC'
 
-    const rows = await db.query(query, params)
+    const rows = await tenantQuery(tenantId, query, params)
 
     const heatmap = {}
     rows.forEach(r => {
@@ -34,7 +38,7 @@ export default async function handler(req, res) {
       heatmap[d] = r.count
     })
 
-    const allUsers = await db.query(
+    const allUsers = await tenantQuery(tenantId,
       `SELECT id, name FROM users WHERE is_active = 1 ORDER BY name`
     )
 

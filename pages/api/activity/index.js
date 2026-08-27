@@ -1,11 +1,15 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
+
+  const tenantId = await getTenantFromRequest(req)
 
   if (req.method === 'GET') {
     try {
@@ -15,6 +19,10 @@ export default async function handler(req, res) {
       let whereConditions = []
       let params = []
 
+      if (tenantId) {
+        whereConditions.push('al.tenant_id = ?')
+        params.push(tenantId)
+      }
       if (user_id) {
         whereConditions.push('al.user_id = ?')
         params.push(user_id)
@@ -38,12 +46,14 @@ export default async function handler(req, res) {
 
       const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''
 
-      const countResult = await db.queryOne(
+      const countResult = await tenantQueryOne(
+        tenantId,
         `SELECT COUNT(*) as total FROM activity_logs al ${whereClause}`,
         params
       )
 
-      const activities = await db.query(
+      const activities = await tenantQuery(
+        tenantId,
         `SELECT al.*, u.name as user_name, u.avatar as user_avatar
         FROM activity_logs al
         LEFT JOIN users u ON al.user_id = u.id
@@ -53,7 +63,7 @@ export default async function handler(req, res) {
         [...params, parseInt(limit), offset]
       )
 
-      const users = await db.query('SELECT id, name FROM users ORDER BY name ASC')
+      const users = await tenantQuery(tenantId, 'SELECT id, name FROM users ORDER BY name ASC')
 
       return res.status(200).json({
         activities,

@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   try {
@@ -8,8 +10,10 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
+    const tenantId = await getTenantFromRequest(req)
+
     if (req.method === 'GET') {
-      const settings = await db.queryOne(
+      const settings = await tenantQueryOne(tenantId,
         'SELECT telegram_chat_id, email_notifications, telegram_notifications FROM users WHERE id = ?',
         [user.id]
       )
@@ -19,7 +23,7 @@ export default async function handler(req, res) {
     if (req.method === 'PUT') {
       const { telegram_chat_id, email_notifications, telegram_notifications } = req.body
 
-      await db.update(
+      await tenantUpdate(tenantId,
         'UPDATE users SET telegram_chat_id = ?, email_notifications = ?, telegram_notifications = ? WHERE id = ?',
         [telegram_chat_id || null, email_notifications ? 1 : 0, telegram_notifications ? 1 : 0, user.id]
       )

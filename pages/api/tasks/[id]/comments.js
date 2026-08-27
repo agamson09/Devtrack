@@ -1,6 +1,9 @@
 import { getAuthUser } from '@/lib/auth';
+import { getTenantFromRequest } from '@/lib/tenant';
 import db from '@/lib/db';
 import { notifyNewComment } from '@/lib/notifications';
+
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db;
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req);
@@ -8,16 +11,19 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
+
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const task = await db.queryOne('SELECT id FROM tasks WHERE id = ?', [id]);
+      const task = await tenantQueryOne(tenantId, 'SELECT id FROM tasks WHERE id = ?', [id]);
       if (!task) {
         return res.status(404).json({ error: 'Task not found' });
       }
 
-      const comments = await db.query(
+      const comments = await tenantQuery(
+        tenantId,
         `SELECT tc.*, u.name as user_name, u.avatar as user_avatar, u.avatar_style as user_avatar_style, u.avatar_seed as user_avatar_seed, u.avatar_options as user_avatar_options
         FROM task_comments tc
         LEFT JOIN users u ON tc.user_id = u.id
@@ -44,23 +50,26 @@ export default async function handler(req, res) {
     }
 
     try {
-      const task = await db.queryOne('SELECT * FROM tasks WHERE id = ?', [id]);
+      const task = await tenantQueryOne(tenantId, 'SELECT * FROM tasks WHERE id = ?', [id]);
       if (!task) {
         return res.status(404).json({ error: 'Task not found' });
       }
 
       const trimmedComment = commentText.trim();
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO task_comments (task_id, user_id, comment, image_url, checklist_id, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [id, user.id, trimmedComment, imageUrl, checklistId]
       );
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [user.id, 'commented on task', 'task', id, JSON.stringify({ title: task.title })]
       );
 
-      const newComment = await db.queryOne(
+      const newComment = await tenantQueryOne(
+        tenantId,
         `SELECT tc.*, u.name as user_name, u.avatar as user_avatar, u.avatar_style as user_avatar_style, u.avatar_seed as user_avatar_seed, u.avatar_options as user_avatar_options
         FROM task_comments tc
         LEFT JOIN users u ON tc.user_id = u.id
@@ -70,7 +79,7 @@ export default async function handler(req, res) {
 
       // Send notification to task assignee
       try {
-        const commenter = await db.queryOne('SELECT name FROM users WHERE id = ?', [user.id])
+        const commenter = await tenantQueryOne(tenantId, 'SELECT name FROM users WHERE id = ?', [user.id])
         await notifyNewComment(task, { ...newComment, user_name: commenter?.name }, user.id)
       } catch (e) { console.error('Comment notification error:', e) }
 
@@ -89,7 +98,8 @@ export default async function handler(req, res) {
     }
 
     try {
-      const existingComment = await db.queryOne(
+      const existingComment = await tenantQueryOne(
+        tenantId,
         'SELECT * FROM task_comments WHERE id = ? AND task_id = ?',
         [comment_id, id]
       );
@@ -102,7 +112,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Forbidden: You can only delete your own comments' });
       }
 
-      await db.query('DELETE FROM task_comments WHERE id = ?', [comment_id]);
+      await tenantQuery(tenantId, 'DELETE FROM task_comments WHERE id = ?', [comment_id]);
 
       return res.status(200).json({ message: 'Comment deleted' });
     } catch (error) {

@@ -1,5 +1,7 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 const { encrypt, decrypt } = require('@/lib/vault')
 
 export default async function handler(req, res) {
@@ -7,11 +9,13 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (user.role !== 'admin' && user.role !== 'it_support') return res.status(403).json({ error: 'Forbidden' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   const { id } = req.query
 
   if (req.method === 'GET') {
     try {
-      const account = await db.queryOne(
+      const account = await tenantQueryOne(tenantId,
         `SELECT e.*, u.name as user_name FROM it_email_accounts e LEFT JOIN users u ON e.user_id = u.id WHERE e.id = ?`, [id])
       if (!account) return res.status(404).json({ error: 'Not found' })
       if (account.password) account.password = decrypt(account.password)
@@ -25,7 +29,7 @@ export default async function handler(req, res) {
   if (req.method === 'PUT') {
     const { email, user_id, provider, password, status, created_date, notes } = req.body
     try {
-      const account = await db.queryOne('SELECT * FROM it_email_accounts WHERE id = ?', [id])
+      const account = await tenantQueryOne(tenantId, 'SELECT * FROM it_email_accounts WHERE id = ?', [id])
       if (!account) return res.status(404).json({ error: 'Not found' })
 
       // Only re-encrypt if a new password was actually provided
@@ -33,7 +37,7 @@ export default async function handler(req, res) {
       const isMaskedPassword = password === '[encrypted]' || password === '••••••••'
       const hasNewPassword = password && !isMaskedPassword
       const encryptedPw = hasNewPassword ? encrypt(password) : account.password
-      await db.query(
+      await tenantQuery(tenantId,
         'UPDATE it_email_accounts SET email=COALESCE(?,email), user_id=COALESCE(?,user_id), provider=COALESCE(?,provider), password=COALESCE(?,password), status=COALESCE(?,status), created_date=COALESCE(?,created_date), notes=COALESCE(?,notes) WHERE id=?',
         [email, user_id || null, provider, encryptedPw, status, created_date, notes, id])
       return res.status(200).json({ message: 'Updated' })
@@ -46,7 +50,7 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     if (user.role !== 'admin') return res.status(403).json({ error: 'Only admins can delete' })
     try {
-      await db.remove('DELETE FROM it_email_accounts WHERE id = ?', [id])
+      await tenantRemove(tenantId, 'DELETE FROM it_email_accounts WHERE id = ?', [id])
       return res.status(200).json({ message: 'Deleted' })
     } catch (err) {
       console.error('Delete email error:', err)

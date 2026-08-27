@@ -1,13 +1,17 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
   const { groupId } = req.query
 
-  const membership = await db.queryOne(
+  const membership = await tenantQueryOne(
+    tenantId,
     'SELECT id FROM chat_group_members WHERE group_id = ? AND user_id = ?',
     [groupId, user.id]
   )
@@ -17,7 +21,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const members = await db.query(`
+      const members = await tenantQuery(tenantId, `
         SELECT u.id, u.name, u.avatar, u.avatar_style, u.avatar_seed, u.avatar_options, u.role, cgm.joined_at
         FROM chat_group_members cgm
         JOIN users u ON cgm.user_id = u.id
@@ -40,7 +44,8 @@ export default async function handler(req, res) {
 
     try {
       for (const uid of userIds) {
-        await db.insert(
+        await tenantInsert(
+          tenantId,
           'INSERT IGNORE INTO chat_group_members (group_id, user_id) VALUES (?, ?)',
           [groupId, uid]
         )
@@ -60,7 +65,8 @@ export default async function handler(req, res) {
     }
 
     try {
-      await db.query(
+      await tenantRemove(
+        tenantId,
         'DELETE FROM chat_group_members WHERE group_id = ? AND user_id = ?',
         [groupId, userId]
       )
@@ -74,7 +80,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET' && req.query.media === '1') {
     try {
-      const media = await db.query(`
+      const media = await tenantQuery(tenantId, `
         SELECT m.id, m.media_url, m.created_at, u.name as sender_name
         FROM messages m
         JOIN users u ON m.sender_id = u.id

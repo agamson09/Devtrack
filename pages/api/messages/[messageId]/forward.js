@@ -1,10 +1,13 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
   const { messageId } = req.query
 
   if (req.method === 'POST') {
@@ -12,23 +15,25 @@ export default async function handler(req, res) {
     if (!targetReceiverId && !targetGroupId) return res.status(400).json({ error: 'targetReceiverId or targetGroupId is required' })
 
     try {
-      const msg = await db.queryOne('SELECT * FROM messages WHERE id = ?', [messageId])
+      const msg = await tenantQueryOne(tenantId, 'SELECT * FROM messages WHERE id = ?', [messageId])
       if (!msg) return res.status(404).json({ error: 'Message not found' })
 
       const isGroup = !!targetGroupId
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO messages (sender_id, receiver_id, group_id, message, message_type, media_url, forwarded_from) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [user.id, targetReceiverId || null, targetGroupId || null, msg.message, msg.message_type, msg.media_url, msg.id]
       )
 
-      const newMsg = await db.queryOne(
+      const newMsg = await tenantQueryOne(
+        tenantId,
         'SELECT m.*, u.name as sender_name FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?',
         [result.insertId]
       )
 
       if (global.io) {
         if (isGroup) {
-          const members = await db.query('SELECT user_id FROM chat_group_members WHERE group_id = ?', [targetGroupId])
+          const members = await tenantQuery(tenantId, 'SELECT user_id FROM chat_group_members WHERE group_id = ?', [targetGroupId])
           for (const m of members) {
             global.io.to(`user-${m.user_id}`).emit('chat:message', newMsg)
           }

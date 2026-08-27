@@ -1,5 +1,7 @@
 import crypto from 'crypto'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { autoDeployForPush } from '@/lib/gitDeploy'
 
 const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET

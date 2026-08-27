@@ -31,6 +31,9 @@ export default async function handler(req, res) {
       [tenantId, 'admin', user.id]
     )
 
+    // Look up the workspace DB name for the JWT
+    const wsDb = await db.queryOne('SELECT db_name FROM workspace_databases WHERE tenant_id = ?', [tenantId])
+
     // Generate new JWT with the new tenant
     const newToken = generateToken({
       id: user.id,
@@ -38,6 +41,7 @@ export default async function handler(req, res) {
       name: user.name,
       role: 'admin',
       tenant_id: tenantId,
+      workspaceDbName: wsDb?.db_name || null,
     })
 
     // Set cookies

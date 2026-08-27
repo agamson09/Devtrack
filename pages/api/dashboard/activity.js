@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth';
 import db from '@/lib/db';
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db;
+import { getTenantFromRequest } from '@/lib/tenant';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,8 +13,10 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
+
   try {
-    const activities = await db.query(`
+    const activities = await tenantQuery(tenantId, `
       SELECT 
         al.*,
         u.name as user_name

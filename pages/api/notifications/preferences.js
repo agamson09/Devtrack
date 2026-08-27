@@ -1,6 +1,8 @@
 import { getAuthUser } from '@/lib/auth'
 import { getNotificationPreferences } from '@/lib/notifications'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   try {
@@ -8,6 +10,8 @@ export default async function handler(req, res) {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const tenantId = await getTenantFromRequest(req)
 
     if (req.method === 'GET') {
       const prefs = await getNotificationPreferences(user.id)
@@ -70,11 +74,11 @@ export default async function handler(req, res) {
       }
 
       values.push(user.id)
-      await db.update(
+      await tenantUpdate(tenantId,
         `INSERT INTO notification_preferences (user_id) VALUES (?) ON DUPLICATE KEY UPDATE user_id = user_id`,
         [user.id]
       )
-      await db.update(
+      await tenantUpdate(tenantId,
         `UPDATE notification_preferences SET ${setClauses.join(', ')} WHERE user_id = ?`,
         values
       )

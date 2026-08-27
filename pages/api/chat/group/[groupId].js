@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { sendPushNotification } from '@/lib/push'
 import { notifyChatMention, notifyGroupMessageOffline } from '@/lib/notifications'
 
@@ -7,9 +9,11 @@ export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
   const { groupId } = req.query
 
-  const membership = await db.queryOne(
+  const membership = await tenantQueryOne(
+    tenantId,
     'SELECT id FROM chat_group_members WHERE group_id = ? AND user_id = ?',
     [groupId, user.id]
   )
@@ -19,7 +23,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const messages = await db.query(`
+      const messages = await tenantQuery(tenantId, `
         SELECT m.*, u.name as sender_name, u.avatar as sender_avatar, u.avatar_style as sender_avatar_style, u.avatar_seed as sender_avatar_seed, u.avatar_options as sender_avatar_options,
           rm.message as reply_message, rm.sender_id as reply_sender_id, rm.message_type as reply_message_type,
           ru.name as reply_sender_name
@@ -32,13 +36,13 @@ export default async function handler(req, res) {
         LIMIT 200
       `, [groupId])
 
-      await db.query(
+      await tenantQuery(tenantId,
         'UPDATE messages SET is_read = 1 WHERE group_id = ? AND sender_id != ? AND is_read = 0',
         [groupId, user.id]
       )
 
       // Also mark group notifications as read when opening group chat
-      await db.query(
+      await tenantQuery(tenantId,
         "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND type IN ('group_message', 'group_mention') AND source_id = ? AND is_read = 0",
         [user.id, groupId]
       )
@@ -60,19 +64,22 @@ export default async function handler(req, res) {
     }
 
     try {
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO messages (sender_id, receiver_id, group_id, message, message_type, media_url, reply_to) VALUES (?, NULL, ?, ?, ?, ?, ?)',
         [user.id, groupId, msgContent, msgType, mediaUrl || null, replyTo || null]
       )
 
-      const msgs = await db.query(
+      const msgs = await tenantQuery(
+        tenantId,
         'SELECT m.*, u.name as sender_name, u.avatar as sender_avatar, u.avatar_style as sender_avatar_style, u.avatar_seed as sender_avatar_seed, u.avatar_options as sender_avatar_options FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?',
         [result.insertId]
       )
       const msg = msgs[0]
 
       if (global.io) {
-        const members = await db.query(
+        const members = await tenantQuery(
+          tenantId,
           'SELECT user_id FROM chat_group_members WHERE group_id = ?',
           [groupId]
         )
@@ -80,7 +87,7 @@ export default async function handler(req, res) {
           if (m.user_id !== user.id) {
             global.io.to(`user-${m.user_id}`).emit('chat:message', msg)
             if (!global.io.sockets.adapter.rooms.get(`user-${m.user_id}`)) {
-              const groupName = await db.queryOne('SELECT name FROM chat_groups WHERE id = ?', [groupId])
+              const groupName = await tenantQueryOne(tenantId, 'SELECT name FROM chat_groups WHERE id = ?', [groupId])
               sendPushNotification(m.user_id, {
                 title: `${user.name} in ${groupName?.name || 'Group'}`,
                 body: msgContent.substring(0, 200),
@@ -95,15 +102,17 @@ export default async function handler(req, res) {
 
       try {
         await notifyChatMention(user.id, user.name, msgContent, 'group', groupId)
-        const members = await db.query(
+        const members = await tenantQuery(
+          tenantId,
           'SELECT user_id FROM chat_group_members WHERE group_id = ? AND user_id != ?',
           [groupId, user.id]
         )
         // Create notification records for ALL members so Header badge updates
-        const groupNameRow = await db.queryOne('SELECT name FROM chat_groups WHERE id = ?', [groupId])
+        const groupNameRow = await tenantQueryOne(tenantId, 'SELECT name FROM chat_groups WHERE id = ?', [groupId])
         for (const m of members) {
           try {
-            const notifResult = await db.query(
+            const notifResult = await tenantInsert(
+              tenantId,
               'INSERT INTO notifications (user_id, type, title, message, link, source_type, source_id, actor_id, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())',
               [m.user_id, 'group_message', `${user.name} in ${groupNameRow?.name || 'Group'}`, msgContent.substring(0, 200), `/dashboard/chat?group=${groupId}`, 'group', groupId, user.id]
             )
@@ -123,7 +132,8 @@ export default async function handler(req, res) {
                   is_read: 0,
                   created_at: new Date().toISOString(),
                 })
-                const unreadRows = await db.query(
+                const unreadRows = await tenantQuery(
+                  tenantId,
                   'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0',
                   [m.user_id]
                 )

@@ -74,6 +74,20 @@ export default function LoginPage() {
         return
       }
 
+      if (result.requiresWorkspaceSelection) {
+        showToast('info', 'Select a workspace to continue')
+        router.push('/select-workspace')
+        setLoading(false)
+        return
+      }
+
+      if (result.requiresWorkspaceCreation) {
+        showToast('info', result.message || 'Create a workspace to get started')
+        router.push('/register')
+        setLoading(false)
+        return
+      }
+
       if (!result.success) {
         showToast('error', result.error || 'Login failed')
         setLoading(false)
@@ -98,6 +112,20 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await login(form.email, form.password, form.rememberMe, twoFAToken, pendingTwoFA)
+
+      if (result.requiresWorkspaceSelection) {
+        showToast('info', 'Select a workspace to continue')
+        router.push('/select-workspace')
+        setLoading(false)
+        return
+      }
+
+      if (result.requiresWorkspaceCreation) {
+        showToast('info', result.message || 'Create a workspace to get started')
+        router.push('/register')
+        setLoading(false)
+        return
+      }
 
       if (!result.success) {
         showToast('error', result.error || 'Invalid 2FA code')

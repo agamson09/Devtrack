@@ -1,9 +1,13 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
+
+  const tenantId = await getTenantFromRequest(req)
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -28,9 +32,9 @@ export default async function handler(req, res) {
     if (user_id) { taskQuery += ' AND t.assigned_to = ?'; taskParams.push(user_id) }
     taskQuery += ' ORDER BY t.actual_hours DESC'
 
-    const tasks = await db.query(taskQuery, taskParams)
+    const tasks = await tenantQuery(tenantId, taskQuery, taskParams)
 
-    const hoursByUser = await db.query(
+    const hoursByUser = await tenantQuery(tenantId,
       `SELECT u.id, u.name, SUM(t.actual_hours) as total_hours, COUNT(t.id) as task_count
        FROM tasks t
        INNER JOIN users u ON t.assigned_to = u.id
@@ -41,7 +45,7 @@ export default async function handler(req, res) {
       user_id ? [user_id] : []
     )
 
-    const hoursByProject = await db.query(
+    const hoursByProject = await tenantQuery(tenantId,
       `SELECT p.id, p.name, SUM(t.actual_hours) as total_hours, COUNT(t.id) as task_count
        FROM tasks t
        INNER JOIN projects p ON t.project_id = p.id
@@ -52,14 +56,14 @@ export default async function handler(req, res) {
       project_id ? [project_id] : []
     )
 
-    const hoursByPriority = await db.query(
+    const hoursByPriority = await tenantQuery(tenantId,
       `SELECT priority, SUM(actual_hours) as total_hours, COUNT(*) as task_count
        FROM tasks
        WHERE actual_hours IS NOT NULL AND actual_hours > 0
        GROUP BY priority`
     )
 
-    const hoursByModule = await db.query(
+    const hoursByModule = await tenantQuery(tenantId,
       `SELECT COALESCE(module, 'Unassigned') as module_name, SUM(actual_hours) as total_hours, COUNT(*) as task_count
        FROM tasks
        WHERE actual_hours IS NOT NULL AND actual_hours > 0

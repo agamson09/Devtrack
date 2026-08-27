@@ -1,6 +1,9 @@
 import { getAuthUser } from '@/lib/auth';
+import { getTenantFromRequest } from '@/lib/tenant';
 import db from '@/lib/db';
 import { notifyNewCommit } from '@/lib/notifications';
+
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db;
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req);
@@ -8,16 +11,19 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
+
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const task = await db.queryOne('SELECT id FROM tasks WHERE id = ?', [id]);
+      const task = await tenantQueryOne(tenantId, 'SELECT id FROM tasks WHERE id = ?', [id]);
       if (!task) {
         return res.status(404).json({ error: 'Task not found' });
       }
 
-      const commits = await db.query(
+      const commits = await tenantQuery(
+        tenantId,
         'SELECT * FROM task_commits WHERE task_id = ? ORDER BY created_at DESC',
         [id]
       );
@@ -41,12 +47,13 @@ export default async function handler(req, res) {
     }
 
     try {
-      const task = await db.queryOne('SELECT * FROM tasks WHERE id = ?', [id]);
+      const task = await tenantQueryOne(tenantId, 'SELECT * FROM tasks WHERE id = ?', [id]);
       if (!task) {
         return res.status(404).json({ error: 'Task not found' });
       }
 
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         `INSERT INTO task_commits (task_id, commit_hash, commit_message, author, added_lines, deleted_lines, status, created_at) 
         VALUES (?, ?, ?, ?, ?, ?, 'manual', NOW())`,
         [
@@ -59,12 +66,13 @@ export default async function handler(req, res) {
         ]
       );
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [user.id, `added commit ${commit_hash.trim().substring(0, 7)}`, 'task', id, JSON.stringify({ title: task.title })]
       );
 
-      const commit = await db.queryOne('SELECT * FROM task_commits WHERE id = ?', [result.insertId]);
+      const commit = await tenantQueryOne(tenantId, 'SELECT * FROM task_commits WHERE id = ?', [result.insertId]);
 
       // Send notification to task assignee and creator
       try {

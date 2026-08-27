@@ -1,14 +1,18 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (user.role !== 'admin' && user.role !== 'it_support') return res.status(403).json({ error: 'Forbidden' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   if (req.method === 'GET') {
     try {
-      const items = await db.query(
+      const items = await tenantQuery(tenantId,
         `SELECT i.*, u.name as assigned_to_name, 
          (SELECT ia.assigned_at FROM it_inventory_assign ia WHERE ia.inventory_id = i.id AND ia.returned_at IS NULL ORDER BY ia.assigned_at DESC LIMIT 1) as current_assigned_at
          FROM it_inventory i 
@@ -28,7 +32,7 @@ export default async function handler(req, res) {
     if (!item_name) return res.status(400).json({ error: 'Item name is required' })
 
     try {
-      const result = await db.insert('it_inventory', {
+      const result = await tenantInsert(tenantId, 'it_inventory', {
         item_name, category, brand, model, serial_number,
         purchase_date: purchase_date || null, warranty_until: warranty_until || null,
         status: status || 'available', location, notes,

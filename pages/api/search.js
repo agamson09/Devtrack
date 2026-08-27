@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/auth';
 import db from '@/lib/db';
+const { tenantQuery } = db;
 import { getTenantFromRequest } from '@/lib/tenant';
 
 export default async function handler(req, res) {
@@ -21,7 +22,8 @@ export default async function handler(req, res) {
   const tenantId = await getTenantFromRequest(req);
 
   try {
-    const tasks = await db.query(
+    const tasks = await tenantQuery(
+      tenantId,
       `SELECT t.id, t.title, t.status, t.priority, t.deadline, t.module,
               u.name as assignee_name, p.name as project_name, p.id as project_id
        FROM tasks t
@@ -33,7 +35,8 @@ export default async function handler(req, res) {
       [searchTerm, searchTerm, searchTerm]
     );
 
-    const projects = await db.query(
+    const projects = await tenantQuery(
+      tenantId,
       `SELECT id, name, description, status
        FROM projects
        WHERE name LIKE ? OR description LIKE ?
@@ -42,7 +45,6 @@ export default async function handler(req, res) {
       [searchTerm, searchTerm]
     );
 
-    // Knowledge base notes — shared (NULL tenant) or same-tenant only
     let notes = [];
     try {
       let noteSql = `
@@ -56,7 +58,7 @@ export default async function handler(req, res) {
         noteParams.push(tenantId);
       }
       noteSql += ' ORDER BY w.updated_at DESC LIMIT 10';
-      notes = await db.query(noteSql, noteParams);
+      notes = await tenantQuery(tenantId, noteSql, noteParams);
     } catch (e) {
       console.error('Wiki search error:', e.message);
     }

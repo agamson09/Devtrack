@@ -1,6 +1,7 @@
 import db from '@/lib/db'
 const dbPool = db.pool
 import { verifyToken } from '@/lib/auth'
+import { syncUserToTenantDb } from '@/lib/tenant'
 import crypto from 'crypto'
 import bcrypt from 'bcryptjs'
 
@@ -62,6 +63,9 @@ export default async function handler(req, res) {
         )
         await dbPool.execute('UPDATE users SET tenant_id = ? WHERE id = ?', [tenantId, targetUserId])
 
+        // Sync user to workspace database
+        await syncUserToTenantDb(targetUserId, tenantId, inviteRole)
+
         return res.status(200).json({
           success: true,
           message: `${existingUser[0].name} has been added to the team`,
@@ -108,6 +112,9 @@ export default async function handler(req, res) {
           'INSERT INTO tenant_users (tenant_id, user_id, role, invited_by) VALUES (?, ?, ?, ?)',
           [tenantId, result.insertId, inviteRole, decoded.id]
         )
+
+        // Sync new user to workspace database
+        await syncUserToTenantDb(result.insertId, tenantId, inviteRole)
 
         // Mark invite as accepted
         await dbPool.execute(

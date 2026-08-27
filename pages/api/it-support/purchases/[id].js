@@ -1,5 +1,7 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 const { notifyPurchaseApproved, notifyPurchaseRejected } = require('@/lib/notifications')
 
 export default async function handler(req, res) {
@@ -7,11 +9,13 @@ export default async function handler(req, res) {
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (user.role !== 'admin' && user.role !== 'it_support') return res.status(403).json({ error: 'Forbidden' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   const { id } = req.query
 
   if (req.method === 'GET') {
     try {
-      const purchase = await db.queryOne(
+      const purchase = await tenantQueryOne(tenantId,
         `SELECT p.*, u1.name as requested_by_name, u2.name as reviewed_by_name 
          FROM it_purchase_requests p 
          LEFT JOIN users u1 ON p.requested_by = u1.id 
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
     const { status, review_note, item_name, description, quantity, estimated_price, urgency, reason } = req.body
 
     try {
-      const purchase = await db.queryOne('SELECT * FROM it_purchase_requests WHERE id = ?', [id])
+      const purchase = await tenantQueryOne(tenantId, 'SELECT * FROM it_purchase_requests WHERE id = ?', [id])
       if (!purchase) return res.status(404).json({ error: 'Not found' })
 
       const updates = {}
@@ -53,7 +57,7 @@ export default async function handler(req, res) {
 
       if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updates provided' })
 
-      await db.update('UPDATE it_purchase_requests SET ? WHERE id = ?', [updates, id])
+      await tenantUpdate(tenantId, 'UPDATE it_purchase_requests SET ? WHERE id = ?', [updates, id])
 
       try {
         if (status === 'approved') {
@@ -73,7 +77,7 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     if (user.role !== 'admin') return res.status(403).json({ error: 'Only admins can delete' })
     try {
-      await db.remove('DELETE FROM it_purchase_requests WHERE id = ?', [id])
+      await tenantRemove(tenantId, 'DELETE FROM it_purchase_requests WHERE id = ?', [id])
       return res.status(200).json({ message: 'Deleted' })
     } catch (err) {
       console.error('Delete purchase error:', err)

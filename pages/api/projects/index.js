@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
-import { getTenantFromRequest, scopeQuery, getTenantId } from '@/lib/tenant'
+const { tenantQuery, tenantInsert, tenantQueryOne } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { notifyProjectCreated } from '@/lib/notifications'
 import { requireCSRF } from '@/lib/csrf'
 
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
 
       query += ' GROUP BY p.id ORDER BY p.created_at DESC'
 
-      const projects = await db.query(query, params)
+      const projects = await tenantQuery(tenantId, query, params)
       return res.status(200).json({ projects })
     } catch (error) {
       console.error('List projects error:', error)
@@ -69,19 +70,21 @@ export default async function handler(req, res) {
     }
 
     try {
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO projects (name, description, git_repo_url, status, owner_id, tenant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())',
         [name.trim(), description || null, git_repo || null, 'active', user.id, tenantId]
       )
 
       const projectId = result.insertId
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, tenant_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
         [user.id, 'created project', 'project', projectId, JSON.stringify({ name: name.trim() }), tenantId]
       )
 
-      const project = await db.queryOne('SELECT * FROM projects WHERE id = ?', [projectId])
+      const project = await tenantQueryOne(tenantId, 'SELECT * FROM projects WHERE id = ?', [projectId])
       try {
         await notifyProjectCreated(project, user.id)
       } catch (e) { console.error('Project notification error:', e) }

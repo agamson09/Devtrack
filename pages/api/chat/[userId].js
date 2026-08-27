@@ -1,16 +1,20 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
+
+  const tenantId = await getTenantFromRequest(req)
 
   if (req.method === 'GET') {
     const { userId } = req.query
 
     if (req.query.media === '1') {
       try {
-        const media = await db.query(`
+        const media = await tenantQuery(tenantId, `
           SELECT m.id, m.media_url, m.created_at, u.name as sender_name
           FROM messages m
           JOIN users u ON m.sender_id = u.id
@@ -26,7 +30,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const messages = await db.query(`
+      const messages = await tenantQuery(tenantId, `
         SELECT m.*, u.name as sender_name, u.avatar as sender_avatar, u.avatar_style as sender_avatar_style, u.avatar_seed as sender_avatar_seed, u.avatar_options as sender_avatar_options,
           rm.message as reply_message, rm.sender_id as reply_sender_id, rm.message_type as reply_message_type,
           ru.name as reply_sender_name
@@ -40,13 +44,13 @@ export default async function handler(req, res) {
         LIMIT 200
       `, [user.id, userId, userId, user.id])
 
-      await db.query(
+      await tenantQuery(tenantId,
         'UPDATE messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0',
         [userId, user.id]
       )
 
       // Also mark chat notifications from this user as read
-      await db.query(
+      await tenantQuery(tenantId,
         "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND type IN ('chat_message', 'chat_mention') AND actor_id = ? AND is_read = 0",
         [user.id, userId]
       )

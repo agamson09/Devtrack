@@ -1,5 +1,8 @@
 import { getAuthUser } from '@/lib/auth';
+import { getTenantFromRequest } from '@/lib/tenant';
 import db from '@/lib/db';
+
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db;
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,6 +13,8 @@ export default async function handler(req, res) {
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  const tenantId = await getTenantFromRequest(req);
 
   try {
     const { status, project_id } = req.query;
@@ -33,7 +38,7 @@ export default async function handler(req, res) {
 
     query += ' ORDER BY FIELD(t.status, "in_progress", "review", "todo", "done"), t.deadline ASC';
 
-    const tasks = await db.query(query, params);
+    const tasks = await tenantQuery(tenantId, query, params);
     return res.status(200).json({ tasks });
   } catch (error) {
     console.error('My tasks error:', error);

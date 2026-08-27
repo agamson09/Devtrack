@@ -1,9 +1,13 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
+
+  const tenantId = await getTenantFromRequest(req)
 
   if (req.method === 'GET') {
     try {
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
           WHERE p.requested_by = ? ORDER BY p.created_at DESC`
         params = [user.id]
       }
-      const purchases = await db.query(queries, params)
+      const purchases = await tenantQuery(tenantId, queries, params)
       return res.status(200).json({ purchases })
     } catch (err) {
       console.error('List purchases error:', err)
@@ -36,7 +40,7 @@ export default async function handler(req, res) {
     if (!item_name) return res.status(400).json({ error: 'Item name is required' })
 
     try {
-      const result = await db.insert('it_purchase_requests', {
+      const result = await tenantInsert(tenantId, 'it_purchase_requests', {
         requested_by: user.id,
         item_name,
         description: description || null,

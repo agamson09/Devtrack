@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { notifyRoleChanged } from '@/lib/notifications'
 import { requireCSRF } from '@/lib/csrf'
 
@@ -9,7 +11,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  const currentUser = await db.queryOne('SELECT role FROM users WHERE id = ?', [authUser.id])
+  const tenantId = await getTenantFromRequest(req)
+
+  const currentUser = await tenantQueryOne(tenantId, 'SELECT role FROM users WHERE id = ?', [authUser.id])
   if (!currentUser || currentUser.role !== 'admin') {
     return res.status(403).json({ error: 'Only admins can manage users' })
   }
@@ -18,7 +22,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const user = await db.queryOne(
+      const user = await tenantQueryOne(tenantId,
         'SELECT id, name, email, role, avatar, avatar_style, avatar_seed, avatar_options, is_active FROM users WHERE id = ?',
         [id]
       )
@@ -43,13 +47,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'You cannot remove your own admin role' })
     }
 
-    const user = await db.queryOne('SELECT id, name, email FROM users WHERE id = ?', [id])
+    const user = await tenantQueryOne(tenantId, 'SELECT id, name, email FROM users WHERE id = ?', [id])
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
     if (email && email !== user.email) {
-      const existing = await db.queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [email, id])
+      const existing = await tenantQueryOne(tenantId, 'SELECT id FROM users WHERE email = ? AND id != ?', [email, id])
       if (existing) {
         return res.status(400).json({ error: 'Email already exists' })
       }
@@ -68,7 +72,7 @@ export default async function handler(req, res) {
     }
 
     params.push(id)
-    await db.update(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
+    await tenantUpdate(tenantId, `UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params)
 
     const changes = []
     if (role && role !== user.role) changes.push(`role: ${user.role} → ${role}`)
@@ -77,7 +81,7 @@ export default async function handler(req, res) {
     if (is_active !== undefined) changes.push(`active: ${is_active ? 'yes' : 'no'}`)
 
     if (changes.length > 0) {
-      await db.insert(
+      await tenantInsert(tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [authUser.id, 'updated user', 'user', id, JSON.stringify({ changes })]
       )
@@ -89,7 +93,7 @@ export default async function handler(req, res) {
       }
     } catch (e) { console.error('Role change notification error:', e) }
 
-    const updated = await db.queryOne('SELECT id, name, email, role, avatar, avatar_style, avatar_seed, avatar_options, is_active FROM users WHERE id = ?', [id])
+    const updated = await tenantQueryOne(tenantId, 'SELECT id, name, email, role, avatar, avatar_style, avatar_seed, avatar_options, is_active FROM users WHERE id = ?', [id])
     return res.status(200).json({ user: updated })
   }
 
@@ -99,14 +103,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'You cannot delete your own account' })
     }
 
-    const user = await db.queryOne('SELECT id FROM users WHERE id = ?', [id])
+    const user = await tenantQueryOne(tenantId, 'SELECT id FROM users WHERE id = ?', [id])
     if (!user) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    await db.update('UPDATE users SET is_active = 0 WHERE id = ?', [id])
+    await tenantUpdate(tenantId, 'UPDATE users SET is_active = 0 WHERE id = ?', [id])
 
-    await db.insert(
+    await tenantInsert(tenantId,
       'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
       [authUser.id, 'deactivated user', 'user', id, JSON.stringify({})]
     )

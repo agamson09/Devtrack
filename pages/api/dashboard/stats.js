@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth';
 import db from '@/lib/db';
+const { tenantQuery, tenantQueryOne } = db;
+import { getTenantFromRequest } from '@/lib/tenant';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,18 +13,21 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
+
   try {
-    const totalTasksResult = await db.queryOne('SELECT COUNT(*) as total FROM tasks');
-    const todoResult = await db.queryOne("SELECT COUNT(*) as total FROM tasks WHERE status = 'todo'");
-    const inProgressResult = await db.queryOne("SELECT COUNT(*) as total FROM tasks WHERE status = 'in_progress'");
-    const reviewResult = await db.queryOne("SELECT COUNT(*) as total FROM tasks WHERE status = 'review'");
-    const doneResult = await db.queryOne("SELECT COUNT(*) as total FROM tasks WHERE status = 'done'");
-    const overdueResult = await db.queryOne(
+    const totalTasksResult = await tenantQueryOne(tenantId, 'SELECT COUNT(*) as total FROM tasks');
+    const todoResult = await tenantQueryOne(tenantId, "SELECT COUNT(*) as total FROM tasks WHERE status = 'todo'");
+    const inProgressResult = await tenantQueryOne(tenantId, "SELECT COUNT(*) as total FROM tasks WHERE status = 'in_progress'");
+    const reviewResult = await tenantQueryOne(tenantId, "SELECT COUNT(*) as total FROM tasks WHERE status = 'review'");
+    const doneResult = await tenantQueryOne(tenantId, "SELECT COUNT(*) as total FROM tasks WHERE status = 'done'");
+    const overdueResult = await tenantQueryOne(
+      tenantId,
       "SELECT COUNT(*) as total FROM tasks WHERE deadline < NOW() AND status != 'done'"
     );
-    const totalProjectsResult = await db.queryOne('SELECT COUNT(*) as total FROM projects');
+    const totalProjectsResult = await tenantQueryOne(tenantId, 'SELECT COUNT(*) as total FROM projects');
 
-    const memberStats = await db.query(`
+    const memberStats = await tenantQuery(tenantId, `
       SELECT 
         u.name,
         COUNT(CASE WHEN t.status = 'todo' THEN 1 END) as todo,
@@ -43,7 +48,7 @@ export default async function handler(req, res) {
       done: Number(m.done) || 0,
     }));
 
-    const weeklyVelocity = await db.query(`
+    const weeklyVelocity = await tenantQuery(tenantId, `
       SELECT 
         YEAR(updated_at) AS year,
         WEEK(updated_at) AS week,
@@ -54,7 +59,7 @@ export default async function handler(req, res) {
       ORDER BY year, week
     `);
 
-    const overdueTasks = await db.query(`
+    const overdueTasks = await tenantQuery(tenantId, `
       SELECT t.id, t.title, t.deadline, t.status, u.name AS assignee_name, p.name AS project_name
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id

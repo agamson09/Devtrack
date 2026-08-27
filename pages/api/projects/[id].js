@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth';
 import db from '@/lib/db';
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate } = db;
+import { getTenantFromRequest } from '@/lib/tenant';
 import { notifyProjectUpdated, notifyProjectDeleted } from '@/lib/notifications';
 import { requireCSRF } from '@/lib/csrf';
 
@@ -9,11 +11,13 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = await getTenantFromRequest(req);
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const project = await db.queryOne(
+      const project = await tenantQueryOne(
+        tenantId,
         `SELECT 
           p.*,
           COUNT(DISTINCT t.id) as task_count,
@@ -29,7 +33,8 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
-      const members = await db.query(
+      const members = await tenantQuery(
+        tenantId,
         `SELECT DISTINCT u.id, u.name, u.email, u.role
         FROM tasks t
         JOIN users u ON t.assigned_to = u.id
@@ -50,7 +55,7 @@ export default async function handler(req, res) {
     const { name, description, git_repo_url, status } = req.body;
 
     try {
-      const existing = await db.queryOne('SELECT * FROM projects WHERE id = ?', [id]);
+      const existing = await tenantQueryOne(tenantId, 'SELECT * FROM projects WHERE id = ?', [id]);
       if (!existing) {
         return res.status(404).json({ error: 'Project not found' });
       }
@@ -82,7 +87,8 @@ export default async function handler(req, res) {
       updates.push('updated_at = NOW()');
       params.push(id);
 
-      await db.update(
+      await tenantUpdate(
+        tenantId,
         `UPDATE projects SET ${updates.join(', ')} WHERE id = ?`,
         params
       );
@@ -93,13 +99,14 @@ export default async function handler(req, res) {
       if (status !== undefined && status !== existing.status) changes.push('status');
 
       if (changes.length > 0) {
-        await db.insert(
+        await tenantInsert(
+          tenantId,
           'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
           [user.id, `updated project (${changes.join(', ')})`, 'project', id, JSON.stringify({ name: existing.name })]
         );
       }
 
-      const project = await db.queryOne('SELECT * FROM projects WHERE id = ?', [id]);
+      const project = await tenantQueryOne(tenantId, 'SELECT * FROM projects WHERE id = ?', [id]);
       try {
         if (changes.length > 0) {
           await notifyProjectUpdated(project, changes.map(c => ({ field: c })), user.id)
@@ -119,18 +126,19 @@ export default async function handler(req, res) {
     }
 
     try {
-      const existing = await db.queryOne('SELECT * FROM projects WHERE id = ?', [id]);
+      const existing = await tenantQueryOne(tenantId, 'SELECT * FROM projects WHERE id = ?', [id]);
       if (!existing) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
-      await db.query('DELETE FROM task_commits WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
-      await db.query('DELETE FROM task_comments WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
-      await db.query('DELETE FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
-      await db.query('DELETE FROM tasks WHERE project_id = ?', [id]);
-      await db.query('DELETE FROM projects WHERE id = ?', [id]);
+      await tenantQuery(tenantId, 'DELETE FROM task_commits WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
+      await tenantQuery(tenantId, 'DELETE FROM task_comments WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
+      await tenantQuery(tenantId, 'DELETE FROM task_history WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)', [id]);
+      await tenantQuery(tenantId, 'DELETE FROM tasks WHERE project_id = ?', [id]);
+      await tenantQuery(tenantId, 'DELETE FROM projects WHERE id = ?', [id]);
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
         [user.id, 'deleted project', 'project', id, JSON.stringify({ name: existing.name })]
       );

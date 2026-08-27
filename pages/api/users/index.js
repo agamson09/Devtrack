@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
-import { getTenantFromRequest, scopeQuery, getTenantId } from '@/lib/tenant'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { requireCSRF } from '@/lib/csrf'
 
 export default async function handler(req, res) {
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
 
       query += ' ORDER BY u.name ASC'
 
-      const users = await db.query(query, params)
+      const users = await tenantQuery(tenantId, query, params)
       return res.status(200).json({ users })
     } catch (error) {
       console.error('List users error:', error)
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
     }
 
     try {
-      const existing = await db.queryOne('SELECT id FROM users WHERE email = ?', [email.trim()])
+      const existing = await tenantQueryOne(tenantId, 'SELECT id FROM users WHERE email = ?', [email.trim()])
       if (existing) {
         return res.status(400).json({ error: 'Email already exists' })
       }
@@ -79,25 +80,19 @@ export default async function handler(req, res) {
       const defaultStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)]
       const defaultSeed = name.trim().toLowerCase().replace(/\s+/g, '')
 
-      const result = await db.insert(
-        'INSERT INTO users (name, email, password, role, avatar_style, avatar_seed, is_active, tenant_id, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, NOW())',
-        [name.trim(), email.trim(), hashedPassword, role, defaultStyle, defaultSeed, tenantId]
+      const result = await tenantInsert(
+        tenantId,
+        'INSERT INTO users (name, email, password, role, avatar_style, avatar_seed, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW())',
+        [name.trim(), email.trim(), hashedPassword, role, defaultStyle, defaultSeed]
       )
 
-      // Add user to tenant
-      if (tenantId) {
-        await db.insert(
-          'INSERT INTO tenant_users (tenant_id, user_id, role, joined_at) VALUES (?, ?, ?, NOW())',
-          [tenantId, result.insertId, role === 'admin' ? 'admin' : 'member']
-        )
-      }
-
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, tenant_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
         [user.id, 'created user', 'user', result.insertId, JSON.stringify({ name: name.trim(), email: email.trim(), role }), tenantId]
       )
 
-      const newUser = await db.queryOne('SELECT id, name, email, role, avatar, avatar_style, avatar_seed, avatar_options, is_active FROM users WHERE id = ?', [result.insertId])
+      const newUser = await tenantQueryOne(tenantId, 'SELECT id, name, email, role, avatar, avatar_style, avatar_seed, avatar_options, is_active FROM users WHERE id = ?', [result.insertId])
       return res.status(201).json({ user: newUser })
     } catch (error) {
       console.error('Create user error:', error)

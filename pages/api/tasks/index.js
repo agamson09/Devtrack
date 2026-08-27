@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
-import { getTenantFromRequest, scopeQuery, getTenantId } from '@/lib/tenant'
+const { tenantQuery, tenantInsert, tenantQueryOne } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { notifyTaskCreated } from '@/lib/notifications'
 import { validateData, validatePagination } from '@/lib/middleware'
 import { requireCSRF } from '@/lib/csrf'
@@ -60,20 +61,21 @@ export default async function handler(req, res) {
       const paginated = Number.isFinite(pageNum) && pageNum > 0 && Number.isFinite(limitNum) && limitNum > 0
       let total = null
       if (paginated) {
-        const countRow = await db.queryOne(query.replace(/^[\s\S]*?FROM tasks/, 'SELECT COUNT(*) AS total FROM tasks'), params)
+        const countRow = await tenantQueryOne(tenantId, query.replace(/^[\s\S]*?FROM tasks/, 'SELECT COUNT(*) AS total FROM tasks'), params)
         total = countRow?.total ?? 0
         query += ' LIMIT ? OFFSET ?'
         params.push(limitNum, (pageNum - 1) * limitNum)
       }
 
-      const tasks = await db.query(query, params)
+      const tasks = await tenantQuery(tenantId, query, params)
 
       // Batch-fetch labels for ALL tasks in one query (fixes N+1)
       let labelsByTask = new Map()
       if (tasks.length > 0) {
         const ids = tasks.map(t => t.id)
         const placeholders = ids.map(() => '?').join(',')
-        const labelRows = await db.query(
+        const labelRows = await tenantQuery(
+          tenantId,
           `SELECT tl.task_id, l.id, l.name, l.color
            FROM task_labels tl
            INNER JOIN labels l ON tl.label_id = l.id
@@ -105,18 +107,20 @@ export default async function handler(req, res) {
     const { project_id, title, description, status, priority, assigned_to, module, deadline, start_date, estimated_hours } = data
 
     try {
-      const project = await db.queryOne('SELECT * FROM projects WHERE id = ?', [project_id])
+      const project = await tenantQueryOne(tenantId, 'SELECT * FROM projects WHERE id = ?', [project_id])
       if (!project) {
         return res.status(404).json({ error: 'Project not found' })
       }
 
       // New tasks land on top of their column
-      const [{ maxOrder }] = await db.query(
+      const [{ maxOrder }] = await tenantQuery(
+        tenantId,
         'SELECT COALESCE(MAX(sort_order), -1) + 10 AS maxOrder FROM tasks WHERE project_id = ? AND status = ?',
         [project_id, status || 'todo']
       )
 
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         `INSERT INTO tasks (project_id, title, description, status, priority, assigned_to, module, deadline, start_date, estimated_hours, sort_order, created_by, tenant_id, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
@@ -138,12 +142,14 @@ export default async function handler(req, res) {
 
       const taskId = result.insertId
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO activity_logs (user_id, action, target_type, target_id, details, tenant_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
         [user.id, 'created task', 'task', taskId, JSON.stringify({ title: title.trim() }), tenantId]
       )
 
-      const task = await db.queryOne(
+      const task = await tenantQueryOne(
+        tenantId,
         `SELECT t.*, u.name as assignee_name 
         FROM tasks t 
         LEFT JOIN users u ON t.assigned_to = u.id 

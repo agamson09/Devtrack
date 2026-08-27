@@ -1,6 +1,8 @@
 import { getAuthUser } from '@/lib/auth'
 import { markAsRead } from '@/lib/notifications'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   try {
@@ -9,10 +11,12 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
+    const tenantId = await getTenantFromRequest(req)
+
     if (req.method === 'PUT') {
       const { id } = req.query
       // Verify ownership — only allow marking own notifications as read
-      const notif = await db.queryOne('SELECT user_id FROM notifications WHERE id = ?', [parseInt(id)])
+      const notif = await tenantQueryOne(tenantId, 'SELECT user_id FROM notifications WHERE id = ?', [parseInt(id)])
       if (!notif) return res.status(404).json({ error: 'Notification not found' })
       if (notif.user_id !== user.id) return res.status(403).json({ error: 'Forbidden' })
       await markAsRead(parseInt(id))

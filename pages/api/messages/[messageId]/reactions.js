@@ -1,15 +1,18 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
   const { messageId } = req.query
 
   if (req.method === 'GET') {
     try {
-      const reactions = await db.query(`
+      const reactions = await tenantQuery(tenantId, `
         SELECT mr.id, mr.emoji, mr.user_id, u.name
         FROM message_reactions mr
         JOIN users u ON mr.user_id = u.id
@@ -34,15 +37,17 @@ export default async function handler(req, res) {
     const { emoji } = req.body
     if (!emoji) return res.status(400).json({ error: 'emoji is required' })
     try {
-      const existing = await db.queryOne(
+      const existing = await tenantQueryOne(
+        tenantId,
         'SELECT id FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
         [messageId, user.id, emoji]
       )
       if (existing) {
-        await db.query('DELETE FROM message_reactions WHERE id = ?', [existing.id])
+        await tenantRemove(tenantId, 'DELETE FROM message_reactions WHERE id = ?', [existing.id])
         return res.status(200).json({ action: 'removed', emoji })
       } else {
-        await db.query(
+        await tenantInsert(
+          tenantId,
           'INSERT INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
           [messageId, user.id, emoji]
         )

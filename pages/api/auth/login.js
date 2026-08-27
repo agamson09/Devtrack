@@ -21,6 +21,24 @@ function sanitizeUser(user) {
   }
 }
 
+/**
+ * Look up all workspaces a user belongs to, with their database names.
+ */
+async function getUserWorkspaces(userId) {
+  const workspaces = await query(
+    `SELECT tu.tenant_id, tu.role, tu.joined_at,
+            t.name, t.slug, t.status,
+            wd.db_name as workspace_db_name
+     FROM tenant_users tu
+     JOIN tenants t ON tu.tenant_id = t.id
+     LEFT JOIN workspace_databases wd ON wd.tenant_id = tu.tenant_id
+     WHERE tu.user_id = ? AND t.status = 'active'
+     ORDER BY tu.joined_at ASC`,
+    [userId]
+  )
+  return workspaces
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -111,44 +129,98 @@ export default async function handler(req, res) {
       }
     }
 
-    await query('INSERT INTO login_attempts (email, ip_address, success) VALUES (?, ?, 1)', [email, ip])
+    // ── Workspace selection ──────────────────────────────────
+    // Look up all workspaces this user belongs to.
+    const workspaces = await getUserWorkspaces(user.id)
+
+    if (workspaces.length === 0) {
+      // No workspaces — user needs to create or join one first
+      await query('INSERT INTO login_attempts (email, ip_address, success) VALUES (?, ?, 1)', [email, ip])
+      await logSecurityEvent(user.id, 'login_success', `Login successful but no workspaces found`, req, 'low', { email })
+      return res.status(200).json({
+        requiresWorkspaceCreation: true,
+        user: sanitizeUser(user),
+        message: 'No workspaces found. Please create or join a workspace.',
+      })
+    }
 
     const isRemembered = rememberMe === true || rememberMe === 'true'
     const session = await createSession(user.id, req, isRemembered)
-    // Minimal JWT payload — NEVER embed the full user row (it would leak the
-    // password hash and other sensitive columns into the readable token body).
-    const jwtToken = generateToken({
+
+    // Single workspace → auto-select it
+    if (workspaces.length === 1) {
+      const ws = workspaces[0]
+      const jwtToken = generateToken({
+        id: user.id,
+        tenant_id: ws.tenant_id,
+        workspaceDbName: ws.workspace_db_name || null,
+        name: user.name,
+        email: user.email,
+        role: ws.role === 'owner' ? 'admin' : (ws.role || user.role),
+      })
+
+      await query('INSERT INTO login_attempts (email, ip_address, success) VALUES (?, ?, 1)', [email, ip])
+      await logSecurityEvent(user.id, 'login_success', `Login successful from ${session.deviceInfo || 'unknown device'}`, req, 'low',
+        { email: user.email, device: session.deviceInfo, rememberMe: isRemembered })
+
+      try {
+        const recentSessions = await query(
+          'SELECT COUNT(*) as cnt FROM user_sessions WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)',
+          [user.id]
+        )
+        if (recentSessions[0]?.cnt <= 1) {
+          await notifyLoginNewDevice(user.id, { ip, browser: session.deviceInfo })
+        }
+      } catch (e) { console.error('Login notification error:', e) }
+
+      res.setHeader('Set-Cookie', [
+        `devtrack_token=${jwtToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${isRemembered ? 2592000 : 86400}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
+        `devtrack_session=${session.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${isRemembered ? 2592000 : 86400}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+      ])
+
+      const csrfToken = await createCSRFToken(user.id)
+
+      return res.status(200).json({
+        user: sanitizeUser(user),
+        token: jwtToken,
+        csrfToken,
+        session: { token: session.token, expiresAt: session.expiresAt }
+      })
+    }
+
+    // Multiple workspaces → require selection
+    // Issue a temporary JWT (no tenant_id/workspaceDbName) for the workspace selection step
+    const tempToken = generateToken({
       id: user.id,
-      tenant_id: user.tenant_id ?? null,
       name: user.name,
       email: user.email,
       role: user.role,
-    })
+      workspaceSelectionPending: true,
+    }, '30m')
 
-    await logSecurityEvent(user.id, 'login_success', `Login successful from ${session.deviceInfo || 'unknown device'}`, req, 'low',
-      { email: user.email, device: session.deviceInfo, rememberMe: isRemembered })
-
-    try {
-      const recentSessions = await query(
-        'SELECT COUNT(*) as cnt FROM user_sessions WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)',
-        [user.id]
-      )
-      if (recentSessions[0]?.cnt <= 1) {
-        await notifyLoginNewDevice(user.id, { ip, browser: session.deviceInfo })
-      }
-    } catch (e) { console.error('Login notification error:', e) }
+    await query('INSERT INTO login_attempts (email, ip_address, success) VALUES (?, ?, 1)', [email, ip])
+    await logSecurityEvent(user.id, 'login_success', `Login successful — workspace selection required`, req, 'low',
+      { email: user.email, device: session.deviceInfo, rememberMe: isRemembered, workspaceCount: workspaces.length })
 
     res.setHeader('Set-Cookie', [
-      `devtrack_token=${jwtToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${isRemembered ? 2592000 : 86400}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
+      `devtrack_token=${tempToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1800${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
       `devtrack_session=${session.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${isRemembered ? 2592000 : 86400}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
     ])
 
     const csrfToken = await createCSRFToken(user.id)
 
     return res.status(200).json({
+      requiresWorkspaceSelection: true,
       user: sanitizeUser(user),
-      token: jwtToken,
+      token: tempToken,
       csrfToken,
+      workspaces: workspaces.map(ws => ({
+        id: ws.tenant_id,
+        name: ws.name,
+        slug: ws.slug,
+        role: ws.role,
+        joinedAt: ws.joined_at,
+      })),
       session: { token: session.token, expiresAt: session.expiresAt }
     })
   } catch (error) {

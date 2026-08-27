@@ -1,18 +1,22 @@
 const { getAuthUser } = require('@/lib/auth')
 const db = require('@/lib/db')
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+const { getTenantFromRequest } = require('@/lib/tenant')
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
   if (user.role !== 'admin' && user.role !== 'it_support') return res.status(403).json({ error: 'Forbidden' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   const { id } = req.query
 
   if (req.method === 'GET') {
     try {
-      const item = await db.queryOne('SELECT * FROM it_inventory WHERE id = ?', [id])
+      const item = await tenantQueryOne(tenantId, 'SELECT * FROM it_inventory WHERE id = ?', [id])
       if (!item) return res.status(404).json({ error: 'Not found' })
-      const history = await db.query(
+      const history = await tenantQuery(tenantId,
         `SELECT ia.*, u.name as user_name, u2.name as assigned_by_name 
          FROM it_inventory_assign ia 
          LEFT JOIN users u ON ia.user_id = u.id 
@@ -31,10 +35,10 @@ export default async function handler(req, res) {
     const { item_name, category, brand, model, serial_number, purchase_date, warranty_until, status, location, notes } = req.body
 
     try {
-      const item = await db.queryOne('SELECT * FROM it_inventory WHERE id = ?', [id])
+      const item = await tenantQueryOne(tenantId, 'SELECT * FROM it_inventory WHERE id = ?', [id])
       if (!item) return res.status(404).json({ error: 'Not found' })
 
-      await db.update('UPDATE it_inventory SET item_name=COALESCE(?,item_name), category=COALESCE(?,category), brand=COALESCE(?,brand), model=COALESCE(?,model), serial_number=COALESCE(?,serial_number), purchase_date=COALESCE(?,purchase_date), warranty_until=COALESCE(?,warranty_until), status=COALESCE(?,status), location=COALESCE(?,location), notes=COALESCE(?,notes) WHERE id=?',
+      await tenantUpdate(tenantId, 'UPDATE it_inventory SET item_name=COALESCE(?,item_name), category=COALESCE(?,category), brand=COALESCE(?,brand), model=COALESCE(?,model), serial_number=COALESCE(?,serial_number), purchase_date=COALESCE(?,purchase_date), warranty_until=COALESCE(?,warranty_until), status=COALESCE(?,status), location=COALESCE(?,location), notes=COALESCE(?,notes) WHERE id=?',
         [item_name, category, brand, model, serial_number, purchase_date, warranty_until, status, location, notes, id])
       return res.status(200).json({ message: 'Updated' })
     } catch (err) {
@@ -46,8 +50,8 @@ export default async function handler(req, res) {
   if (req.method === 'DELETE') {
     if (user.role !== 'admin') return res.status(403).json({ error: 'Only admins can delete' })
     try {
-      await db.remove('DELETE FROM it_inventory_assign WHERE inventory_id = ?', [id])
-      await db.remove('DELETE FROM it_inventory WHERE id = ?', [id])
+      await tenantRemove(tenantId, 'DELETE FROM it_inventory_assign WHERE inventory_id = ?', [id])
+      await tenantRemove(tenantId, 'DELETE FROM it_inventory WHERE id = ?', [id])
       return res.status(200).json({ message: 'Deleted' })
     } catch (err) {
       console.error('Delete inventory error:', err)

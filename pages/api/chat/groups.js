@@ -1,13 +1,17 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   if (req.method === 'GET') {
     try {
-      const groups = await db.query(`
+      const groups = await tenantQuery(tenantId, `
         SELECT cg.id, cg.name, cg.created_by, cg.created_at,
           (
             SELECT COUNT(*) FROM chat_group_members WHERE group_id = cg.id
@@ -56,13 +60,15 @@ export default async function handler(req, res) {
     }
 
     try {
-      const result = await db.insert(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO chat_groups (name, created_by, created_at) VALUES (?, ?, NOW())',
         [name.trim(), user.id]
       )
       const groupId = result.insertId
 
-      await db.insert(
+      await tenantInsert(
+        tenantId,
         'INSERT INTO chat_group_members (group_id, user_id) VALUES (?, ?)',
         [groupId, user.id]
       )
@@ -70,17 +76,19 @@ export default async function handler(req, res) {
       if (memberIds && memberIds.length > 0) {
         const uniqueMembers = [...new Set(memberIds.filter(id => id != user.id))]
         for (const memberId of uniqueMembers) {
-          await db.insert(
+          await tenantInsert(
+            tenantId,
             'INSERT IGNORE INTO chat_group_members (group_id, user_id) VALUES (?, ?)',
             [groupId, memberId]
           )
         }
       }
 
-      const group = await db.queryOne('SELECT * FROM chat_groups WHERE id = ?', [groupId])
+      const group = await tenantQueryOne(tenantId, 'SELECT * FROM chat_groups WHERE id = ?', [groupId])
 
       if (global.io) {
-        const allMembers = await db.query(
+        const allMembers = await tenantQuery(
+          tenantId,
           'SELECT user_id FROM chat_group_members WHERE group_id = ?',
           [groupId]
         )

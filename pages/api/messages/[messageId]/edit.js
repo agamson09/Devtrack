@@ -1,10 +1,13 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQueryOne, tenantQuery } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
   const { messageId } = req.query
 
   if (req.method === 'PUT') {
@@ -12,12 +15,12 @@ export default async function handler(req, res) {
     if (!message || !message.trim()) return res.status(400).json({ error: 'Message is required' })
 
     try {
-      const msg = await db.queryOne('SELECT * FROM messages WHERE id = ?', [messageId])
+      const msg = await tenantQueryOne(tenantId, 'SELECT * FROM messages WHERE id = ?', [messageId])
       if (!msg) return res.status(404).json({ error: 'Message not found' })
       if (msg.sender_id !== user.id) return res.status(403).json({ error: 'You can only edit your own messages' })
       if (msg.is_deleted) return res.status(400).json({ error: 'Cannot edit deleted message' })
 
-      await db.query('UPDATE messages SET message = ?, is_edited = 1 WHERE id = ?', [message.trim(), messageId])
+      await tenantQuery(tenantId, 'UPDATE messages SET message = ?, is_edited = 1 WHERE id = ?', [message.trim(), messageId])
       return res.status(200).json({ message: { ...msg, message: message.trim(), is_edited: 1 } })
     } catch (err) {
       console.error('Edit message error:', err)
@@ -27,14 +30,14 @@ export default async function handler(req, res) {
 
   if (req.method === 'DELETE') {
     try {
-      const msg = await db.queryOne('SELECT * FROM messages WHERE id = ?', [messageId])
+      const msg = await tenantQueryOne(tenantId, 'SELECT * FROM messages WHERE id = ?', [messageId])
       if (!msg) return res.status(404).json({ error: 'Message not found' })
       if (msg.sender_id !== user.id) return res.status(403).json({ error: 'You can only delete your own messages' })
 
       if (msg.message_type === 'image' || msg.message_type === 'voice') {
-        await db.query('UPDATE messages SET is_deleted = 1, message = NULL, media_url = NULL WHERE id = ?', [messageId])
+        await tenantQuery(tenantId, 'UPDATE messages SET is_deleted = 1, message = NULL, media_url = NULL WHERE id = ?', [messageId])
       } else {
-        await db.query('UPDATE messages SET is_deleted = 1, message = NULL WHERE id = ?', [messageId])
+        await tenantQuery(tenantId, 'UPDATE messages SET is_deleted = 1, message = NULL WHERE id = ?', [messageId])
       }
       return res.status(200).json({ success: true })
     } catch (err) {

@@ -1,13 +1,18 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const tenantId = await getTenantFromRequest(req)
+
   if (req.method === 'GET') {
     try {
-      const labels = await db.query(
+      const labels = await tenantQuery(
+        tenantId,
         `SELECT l.*, COUNT(tl.task_id) as task_count
          FROM labels l
          LEFT JOIN task_labels tl ON l.id = tl.label_id
@@ -26,9 +31,9 @@ export default async function handler(req, res) {
     const { name, color } = req.body
     if (!name || !name.trim()) return res.status(400).json({ error: 'Label name is required' })
     try {
-      const existing = await db.queryOne('SELECT id FROM labels WHERE name = ?', [name.trim()])
+      const existing = await tenantQueryOne(tenantId, 'SELECT id FROM labels WHERE name = ?', [name.trim()])
       if (existing) return res.status(409).json({ error: 'Label already exists' })
-      const result = await db.insert('labels', { name: name.trim(), color: color || '#6366f1' })
+      const result = await tenantInsert(tenantId, 'labels', { name: name.trim(), color: color || '#6366f1' })
       return res.status(201).json({ label: { id: result.id, name: name.trim(), color: color || '#6366f1' } })
     } catch (error) {
       console.error('Create label error:', error)
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
     const { id } = req.query
     if (!id) return res.status(400).json({ error: 'Label ID is required' })
     try {
-      await db.query('DELETE FROM labels WHERE id = ?', [id])
+      await tenantRemove(tenantId, 'DELETE FROM labels WHERE id = ?', [id])
       return res.status(200).json({ message: 'Label deleted' })
     } catch (error) {
       console.error('Delete label error:', error)

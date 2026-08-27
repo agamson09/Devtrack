@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const isApproved = isFirstUser ? 1 : 0;
     const hashedPassword = await hashPassword(password);
 
-    // Create user first (without tenant_id — will be set below)
+    // Create user in master DB (without tenant_id — workspace selection happens at login)
     const result = await insert('users', {
       name,
       email,
@@ -54,12 +54,6 @@ export default async function handler(req, res) {
 
       tenantId = await createTenant(workspaceName.trim(), slug, userId)
 
-      // Update user with tenant_id + role admin
-      await insert(
-        'UPDATE users SET tenant_id = ?, role = ? WHERE id = ?',
-        [tenantId, 'admin', userId]
-      )
-
     } else if (mode === 'join' && inviteCode) {
       // User wants to join existing workspace via invite code
       const joinResult = await joinTenantByInvite(userId, inviteCode)
@@ -68,20 +62,10 @@ export default async function handler(req, res) {
       }
       tenantId = joinResult.tenantId
 
-      // Update user with tenant_id
-      await insert(
-        'UPDATE users SET tenant_id = ? WHERE id = ?',
-        [tenantId, userId]
-      )
-
     } else {
       // Default: create a personal workspace
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36)
       tenantId = await createTenant(name + "'s Workspace", slug, userId)
-      await insert(
-        'UPDATE users SET tenant_id = ?, role = ? WHERE id = ?',
-        [tenantId, 'admin', userId]
-      )
     }
 
     if (!isApproved) {

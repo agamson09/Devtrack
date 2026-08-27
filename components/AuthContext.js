@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null)
   const [csrfToken, setCsrfToken] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [workspaceSelection, setWorkspaceSelection] = useState(null) // { workspaces: [...] }
   const refreshTimerRef = useRef(null)
 
   const scheduleRefresh = useCallback((jwtToken) => {
@@ -113,9 +114,25 @@ export function AuthProvider({ children }) {
         return { success: false, requiresTwoFactor: true, tempToken: data.tempToken, user: data.user }
       }
 
+      // Workspace selection required
+      if (data.requiresWorkspaceSelection) {
+        setWorkspaceSelection({ workspaces: data.workspaces, user: data.user })
+        setToken(data.token)
+        setCsrfToken(data.csrfToken)
+        localStorage.setItem('devtrack_socket_token', data.token)
+        if (data.csrfToken) localStorage.setItem('devtrack_csrf', data.csrfToken)
+        return { success: false, requiresWorkspaceSelection: true, workspaces: data.workspaces, user: data.user }
+      }
+
+      // Workspace creation required (no workspaces)
+      if (data.requiresWorkspaceCreation) {
+        return { success: false, requiresWorkspaceCreation: true, user: data.user, message: data.message }
+      }
+
       setUser(data.user)
       setToken(data.token)
       setCsrfToken(data.csrfToken)
+      setWorkspaceSelection(null)
       localStorage.setItem('devtrack_socket_token', data.token)
       if (data.csrfToken) localStorage.setItem('devtrack_csrf', data.csrfToken)
 
@@ -143,10 +160,49 @@ export function AuthProvider({ children }) {
     setUser(null)
     setToken(null)
     setCsrfToken(null)
+    setWorkspaceSelection(null)
     localStorage.removeItem('devtrack_socket_token')
     localStorage.removeItem('devtrack_remember')
     localStorage.removeItem('devtrack_csrf')
   }, [csrfToken])
+
+  const selectWorkspace = useCallback(async (workspaceId) => {
+    try {
+      const res = await fetch('/api/auth/select-workspace', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          'X-CSRF-Token': localStorage.getItem('devtrack_csrf') || ''
+        },
+        credentials: 'include',
+        body: JSON.stringify({ workspaceId })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        return { success: false, error: data.error }
+      }
+
+      setUser(data.user || user)
+      setToken(data.token)
+      setCsrfToken(data.csrfToken)
+      setWorkspaceSelection(null)
+      localStorage.setItem('devtrack_socket_token', data.token)
+      if (data.csrfToken) localStorage.setItem('devtrack_csrf', data.csrfToken)
+
+      scheduleRefresh(data.token)
+
+      return { success: true, tenant: data.tenant }
+    } catch (err) {
+      return { success: false, error: 'Connection error' }
+    }
+  }, [token, user, scheduleRefresh])
+
+  const clearWorkspaceSelection = useCallback(() => {
+    setWorkspaceSelection(null)
+  }, [])
 
   const value = {
     user,
@@ -156,7 +212,10 @@ export function AuthProvider({ children }) {
     login,
     logout,
     checkAuth,
-    setUser
+    setUser,
+    workspaceSelection,
+    selectWorkspace,
+    clearWorkspaceSelection,
   }
 
   return (

@@ -1,9 +1,14 @@
 import { getAuthUser } from '@/lib/auth'
+import { getTenantFromRequest } from '@/lib/tenant'
 import db from '@/lib/db'
+
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantRemove } = db;
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Unauthorized' })
+
+  const tenantId = await getTenantFromRequest(req);
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -41,10 +46,11 @@ export default async function handler(req, res) {
 
     query += ' ORDER BY COALESCE(t.start_date, t.deadline) ASC'
 
-    const tasks = await db.query(query, params)
+    const tasks = await tenantQuery(tenantId, query, params)
 
     const tasksWithLabels = await Promise.all(tasks.map(async (task) => {
-      const labels = await db.query(
+      const labels = await tenantQuery(
+        tenantId,
         `SELECT l.id, l.name, l.color FROM labels l
          INNER JOIN task_labels tl ON l.id = tl.label_id
          WHERE tl.task_id = ?`,

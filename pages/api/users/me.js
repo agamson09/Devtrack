@@ -1,5 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
+const { tenantQuery, tenantQueryOne, tenantInsert, tenantUpdate, tenantRemove } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 
 export default async function handler(req, res) {
   try {
@@ -8,8 +10,10 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
+    const tenantId = await getTenantFromRequest(req)
+
     if (req.method === 'GET') {
-      const userData = await db.queryOne(
+      const userData = await tenantQueryOne(tenantId,
         'SELECT id, name, email, avatar, avatar_style, avatar_seed, avatar_options, role, created_at FROM users WHERE id = ?',
         [user.id]
       )
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Name and email are required' })
       }
 
-      const existingUser = await db.queryOne(
+      const existingUser = await tenantQueryOne(tenantId,
         'SELECT id FROM users WHERE email = ? AND id != ?',
         [email, user.id]
       )
@@ -31,7 +35,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Email already in use' })
       }
 
-      await db.update(
+      await tenantUpdate(tenantId,
         'UPDATE users SET name = ?, email = ?, avatar = ?, avatar_style = ?, avatar_seed = ?, avatar_options = ? WHERE id = ?',
         [name, email, avatar || null, avatar_style || null, avatar_seed || null, avatar_options ? JSON.stringify(avatar_options) : null, user.id]
       )

@@ -25,9 +25,12 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'You are not a member of this workspace' })
     }
 
-    // Get tenant info
+    // Get tenant info + workspace DB name
     const tenant = await db.queryOne(
-      'SELECT id, name, slug, status FROM tenants WHERE id = ? AND status = ?',
+      `SELECT t.id, t.name, t.slug, t.status, wd.db_name as workspace_db_name
+       FROM tenants t
+       LEFT JOIN workspace_databases wd ON wd.tenant_id = t.id
+       WHERE t.id = ? AND t.status = ?`,
       [tenantId, 'active']
     )
 
@@ -41,13 +44,14 @@ export default async function handler(req, res) {
       [tenantId, user.id]
     )
 
-    // Generate new token with updated tenant_id
+    // Generate new token with updated tenant_id and workspaceDbName
     const newToken = generateToken({
       id: user.id,
       email: user.email,
       name: user.name,
       role: membership.role === 'owner' ? 'admin' : membership.role,
       tenant_id: tenantId,
+      workspaceDbName: tenant?.workspace_db_name || null,
     })
 
     // Set new cookies

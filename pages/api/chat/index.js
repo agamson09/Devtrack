@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth'
 import db from '@/lib/db'
-import { getTenantFromRequest, getTenantId } from '@/lib/tenant'
+const { tenantQuery, tenantQueryOne, tenantInsert } = db
+import { getTenantFromRequest } from '@/lib/tenant'
 import { validateData } from '@/lib/middleware'
 import { requireCSRF } from '@/lib/csrf'
 
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
       let query = `
         SELECT 
           u.id, u.name, u.avatar, u.avatar_style, u.avatar_seed, u.avatar_options, u.role,
-          CASE WHEN m.message_type = 'image' THEN '📷 Image' ELSE m.message END as last_message,
+          CASE WHEN m.message_type = 'image' THEN 'Image' ELSE m.message END as last_message,
           m.message_type as last_message_type,
           m.created_at as last_message_at,
           m.sender_id as last_sender,
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
 
       query += ' ORDER BY m.created_at DESC'
 
-      const conversations = await db.query(query, params)
+      const conversations = await tenantQuery(tenantId, query, params)
 
       return res.status(200).json({ conversations })
     } catch (err) {
@@ -68,7 +69,8 @@ export default async function handler(req, res) {
     try {
       // Verify receiver exists and is in same tenant
       if (tenantId) {
-        const receiver = await db.queryOne(
+        const receiver = await tenantQueryOne(
+          tenantId,
           'SELECT id FROM users WHERE id = ? AND id IN (SELECT user_id FROM tenant_users WHERE tenant_id = ?)',
           [receiverId, tenantId]
         )
@@ -77,12 +79,14 @@ export default async function handler(req, res) {
         }
       }
 
-      const result = await db.query(
+      const result = await tenantInsert(
+        tenantId,
         'INSERT INTO messages (sender_id, receiver_id, message, message_type, media_url, reply_to, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [user.id, receiverId, msgContent, msgType, mediaUrl || null, replyTo || null, tenantId]
       )
 
-      const msgs = await db.query(
+      const msgs = await tenantQuery(
+        tenantId,
         'SELECT m.*, u.name as sender_name, u.avatar as sender_avatar, u.avatar_style as sender_avatar_style, u.avatar_seed as sender_avatar_seed, u.avatar_options as sender_avatar_options FROM messages m JOIN users u ON m.sender_id = u.id WHERE m.id = ?',
         [result.insertId]
       )
@@ -93,13 +97,14 @@ export default async function handler(req, res) {
         global.io.to(`user-${receiverId}`).emit('chat:message', msg)
         global.io.to(`user-${receiverId}`).emit('chat:conversation-update', {
           userId: user.id,
-          lastMessage: msgType === 'image' ? '📷 Image' : msgContent,
+          lastMessage: msgType === 'image' ? 'Image' : msgContent,
           timestamp: msg.created_at,
         })
 
         // Create notification record
         try {
-          const notifResult = await db.query(
+          const notifResult = await tenantInsert(
+            tenantId,
             'INSERT INTO notifications (user_id, type, title, message, link, source_type, source_id, actor_id, tenant_id, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())',
             [receiverId, 'chat_message', user.name || 'Someone', (msgContent || '').substring(0, 200), '/dashboard/chat', 'chat', null, user.id, tenantId]
           )
@@ -117,7 +122,8 @@ export default async function handler(req, res) {
             is_read: 0,
             created_at: new Date().toISOString(),
           })
-          const unreadRows = await db.query(
+          const unreadRows = await tenantQuery(
+            tenantId,
             'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0',
             [receiverId]
           )
