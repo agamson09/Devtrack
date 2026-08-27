@@ -26,22 +26,22 @@ const navSections = [
   {
     label: 'Operations',
     links: [
-      { label: 'Reports', href: '/dashboard/reports', icon: 'fa-chart-bar', adminOnly: true },
-      { label: 'Deploy', href: '/dashboard/deploy', icon: 'fa-rocket', adminOnly: true },
-      { label: 'Heatmap', href: '/dashboard/heatmap', icon: 'fa-fire', adminOnly: true },
-      { label: 'Remote Desktop', href: '/dashboard/remote', icon: 'fa-desktop', adminOnly: true },
+      { label: 'Reports', href: '/dashboard/reports', icon: 'fa-chart-bar', systemAdminOnly: true },
+      { label: 'Deploy', href: '/dashboard/deploy', icon: 'fa-rocket', systemAdminOnly: true },
+      { label: 'Heatmap', href: '/dashboard/heatmap', icon: 'fa-fire', systemAdminOnly: true },
+      { label: 'Remote Desktop', href: '/dashboard/remote', icon: 'fa-desktop', systemAdminOnly: true },
       {
         label: 'DevOps',
         href: '/dashboard/logs',
         icon: 'fa-screwdriver-wrench',
-        adminOnly: true,
+        systemAdminOnly: true,
         children: [
           { label: 'Log Viewer', href: '/dashboard/logs', icon: 'fa-scroll' },
           { label: 'Terminal', href: '/dashboard/terminal', icon: 'fa-terminal' },
         ],
       },
-      { label: 'Server Monitor', href: '/dashboard/server-monitor', icon: 'fa-server', adminOnly: true },
-      { label: 'Uptime', href: '/dashboard/uptime', icon: 'fa-signal', adminOnly: true },
+      { label: 'Server Monitor', href: '/dashboard/server-monitor', icon: 'fa-server', systemAdminOnly: true },
+      { label: 'Uptime', href: '/dashboard/uptime', icon: 'fa-signal', systemAdminOnly: true },
     ],
   },
   {
@@ -65,7 +65,7 @@ const navSections = [
   },
   {
     label: 'Administration',
-    adminOnly: true,
+    systemAdminOnly: true,
     links: [
       { label: 'Database', href: '/dashboard/database', icon: 'fa-database' },
       { label: 'Env Config', href: '/dashboard/env-editor', icon: 'fa-file-code' },
@@ -78,6 +78,7 @@ const navSections = [
         children: [
           { label: 'Branding', href: '/dashboard/admin/branding', icon: 'fa-palette' },
           { label: 'Users', href: '/dashboard/admin/users', icon: 'fa-users' },
+          { label: 'Approvals', href: '/dashboard/admin/approvals', icon: 'fa-user-check' },
         ],
       },
     ],
@@ -91,6 +92,7 @@ const navSections = [
 ]
 
 function linkVisible(link, user) {
+  if (link.systemAdminOnly && user?.id !== 1) return false
   if (link.adminOnly && user?.role !== 'admin') return false
   if (link.itSupportOnly && user?.role !== 'admin' && user?.role !== 'it_support') return false
   return true
@@ -146,7 +148,12 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
 
   const visibleSections = navSections
     .filter(section => linkVisible(section, user))
-    .map(section => ({ ...section, links: section.links.filter(link => linkVisible(link, user)) }))
+    .map(section => ({ 
+      ...section, 
+      links: section.links
+        .filter(link => linkVisible(link, user))
+        .map(link => link.children ? { ...link, children: link.children.filter(child => linkVisible(child, user)) } : link)
+    }))
     .filter(section => section.links.length > 0)
 
   return (

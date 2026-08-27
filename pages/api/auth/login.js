@@ -62,6 +62,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 
+    if (user.is_approved === 0) {
+      await logSecurityEvent(user.id, 'login_failed', `Unapproved user attempted login: ${email}`, req, 'low', { email });
+      return res.status(403).json({ error: 'Account pending admin approval. Please wait for an administrator to approve your registration.' });
+    }
+
     // SSO-only account (no local password set)
     if (!user.password) {
       const providerLabel = { google: 'Google', github: 'GitHub', oidc: 'SSO' }[user.auth_provider] || 'SSO'

@@ -19,7 +19,7 @@ export default function Document() {
         <meta name="apple-mobile-web-app-title" content="DevTrack" />
         <link rel="apple-touch-icon" href="/favicon.webp" />
       </Head>
-      <body className="bg-gray-900 text-white">
+      <body className="bg-gray-900 text-white transition-colors duration-200">
         <Main />
         <NextScript />
       </body>

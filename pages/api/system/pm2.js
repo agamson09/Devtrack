@@ -3,7 +3,7 @@ import { execSync } from 'child_process'
 
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
-  if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' })
+  if (!user || user.id !== 1) return res.status(403).json({ error: 'System Admin access required' })
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   try {

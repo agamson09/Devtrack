@@ -180,6 +180,7 @@ html.light [class*="bg-gray-950"] { background-color: #f9fafb !important; }
 html.light [class*="bg-gray-900"] { background-color: #f9fafb !important; }
 html.light [class*="bg-gray-800"] { background-color: #ffffff !important; }
 html.light [class*="bg-gray-700"] { background-color: #e5e7eb !important; }
+html.light [class*="bg-gray-600"] { background-color: #d1d5db !important; }
 
 /* text */
 html.light [class*="text-white"] { color: #111827 !important; }
@@ -208,23 +209,48 @@ html.light [class*="text-sky-3"], html.light [class*="text-sky-4"] { color: #036
 html.light [class*="text-blue-3"], html.light [class*="text-blue-4"] { color: #1d4ed8 !important; }
 html.light [class*="text-purple-3"], html.light [class*="text-purple-4"] { color: #7e22ce !important; }
 html.light [class*="text-yellow-3"], html.light [class*="text-yellow-4"] { color: #a16207 !important; }
+html.light [class*="text-pink-3"], html.light [class*="text-pink-4"] { color: #be185d !important; }
+html.light [class*="text-violet-3"], html.light [class*="text-violet-4"] { color: #6d28d9 !important; }
+html.light [class*="text-teal-3"], html.light [class*="text-teal-4"] { color: #0d9488 !important; }
+html.light [class*="text-cyan-3"], html.light [class*="text-cyan-4"] { color: #0891b2 !important; }
+html.light [class*="text-lime-3"], html.light [class*="text-lime-4"] { color: #4d7c0f !important; }
+html.light [class*="text-fuchsia-3"], html.light [class*="text-fuchsia-4"] { color: #a21caf !important; }
+
+/* colored bg-50% opacity surfaces: ensure readable text */
+html.light [class*="bg-indigo-500/"] { background-color: rgba(99, 102, 241, 0.12) !important; }
+html.light [class*="bg-amber-500/"] { background-color: rgba(245, 158, 11, 0.12) !important; }
+html.light [class*="bg-purple-500/"] { background-color: rgba(168, 85, 247, 0.12) !important; }
+html.light [class*="bg-emerald-500/"] { background-color: rgba(16, 185, 129, 0.12) !important; }
+html.light [class*="bg-red-500/"] { background-color: rgba(239, 68, 68, 0.12) !important; }
+html.light [class*="bg-green-500/"] { background-color: rgba(34, 197, 94, 0.12) !important; }
+html.light [class*="bg-blue-500/"] { background-color: rgba(59, 130, 246, 0.12) !important; }
 
 /* borders */
 html.light [class*="border-gray-800"] { border-color: #f3f4f6 !important; }
 html.light [class*="border-gray-700"] { border-color: #e5e7eb !important; }
 html.light [class*="border-gray-600"] { border-color: #d1d5db !important; }
+html.light [class*="border-gray-500"] { border-color: #9ca3af !important; }
 
 /* placeholders */
 html.light input::placeholder, html.light textarea::placeholder { color: #9ca3af !important; }
 
 /* custom component classes */
-html.light .glass-panel { background: rgba(255, 255, 255, 0.92); border-color: #e5e7eb; }
-html.light .card, html.light .card-hover { background: rgba(255, 255, 255, 0.85); border-color: #e5e7eb; }
+html.light .glass-panel { background: rgba(255, 255, 255, 0.95); border-color: #e5e7eb; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+html.light .card, html.light .card-hover { background: rgba(255, 255, 255, 0.9); border-color: #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 html.light .input-field { background-color: #ffffff; border-color: #d1d5db; color: #111827; }
+html.light .input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
 html.light .btn-secondary { background-color: #e5e7eb; color: #111827; }
 html.light .btn-secondary:hover { background-color: #d1d5db; }
 html.light .gradient-text { background-image: linear-gradient(to right, #111827, #312e81, #4f46e5); }
 html.light .section-label { color: #6b7280; }
+
+/* skeleton in light mode */
+html.light .skeleton { background-color: #e5e7eb !important; }
+html.light .skeleton::after { background: linear-gradient(90deg, transparent, rgb(0 0 0 / 0.06), transparent) !important; }
+
+/* recharts / chart overrides in light mode */
+html.light .recharts-cartesian-grid line { stroke: #e5e7eb !important; }
+html.light .recharts-text { fill: #6b7280 !important; }
 
 /* per-theme logo swap */
 .theme-logo-light { display: none; }

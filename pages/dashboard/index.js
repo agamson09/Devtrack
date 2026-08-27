@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/components/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import Loading from '@/components/common/Loading';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ClipboardCheck, Play, CheckCircle, AlertTriangle, Users, FolderOpen, Calendar, Activity, SlidersHorizontal, Eye, EyeOff, ChevronUp, ChevronDown, RotateCcw } from 'lucide-react';
@@ -67,10 +68,10 @@ const DEFAULT_LAYOUT = { hidden: [], orders: {} };
 const GRID_COLS_2 = 'grid grid-cols-1 lg:grid-cols-2 gap-6';
 const GRID_COLS_3 = 'grid grid-cols-1 lg:grid-cols-3 gap-6';
 
-function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
+function StatCard({ icon: Icon, label, value, color, delay = 0, isLight }) {
   return (
     <div
-      className="group bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-700/70 transition-all duration-300 ease-out-expo hover:border-gray-600 hover:shadow-card-hover hover:-translate-y-1 animate-fade-in-up"
+      className={`group backdrop-blur-sm rounded-xl p-6 transition-all duration-300 ease-out-expo hover:-translate-y-1 animate-fade-in-up ${isLight ? 'bg-white border border-gray-200 hover:border-gray-300 hover:shadow-md' : 'bg-gray-800/60 border border-gray-700/70 hover:border-gray-600 hover:shadow-card-hover'}`}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-4">
@@ -78,18 +79,18 @@ function StatCard({ icon: Icon, label, value, color, delay = 0 }) {
           <Icon className="w-6 h-6 text-white drop-shadow" />
         </div>
         <div>
-          <p className="text-sm text-gray-400">{label}</p>
-          <p className="text-2xl font-bold text-white tabular-nums">{value}</p>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>{label}</p>
+          <p className={`text-2xl font-bold tabular-nums ${isLight ? 'text-gray-900' : 'text-white'}`}>{value}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function MemberWorkloadRow({ member }) {
+function MemberWorkloadRow({ member, isLight }) {
   return (
-    <tr className="border-b border-gray-700/60 transition-colors hover:bg-gray-700/30">
-      <td className="py-3 px-4 text-white font-medium">{member.name}</td>
+    <tr className={`border-b transition-colors ${isLight ? 'border-gray-100 hover:bg-gray-50' : 'border-gray-700/60 hover:bg-gray-700/30'}`}>
+      <td className={`py-3 px-4 font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{member.name}</td>
       <td className="py-3 px-4 text-center">
         <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-semibold">
           {member.todo}
@@ -111,28 +112,28 @@ function MemberWorkloadRow({ member }) {
         </span>
       </td>
       <td className="py-3 px-4 text-center">
-        <span className="text-white font-bold">{member.todo + member.in_progress + member.review + member.done}</span>
+        <span className={`font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{member.todo + member.in_progress + member.review + member.done}</span>
       </td>
     </tr>
   );
 }
 
-function ActivityItem({ activity }) {
+function ActivityItem({ activity, isLight }) {
   const timeAgo = getTimeAgo(activity.created_at);
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-gray-700/60 last:border-b-0">
+    <div className={`flex items-start gap-3 py-3 last:border-b-0 ${isLight ? 'border-b border-gray-100' : 'border-b border-gray-700/60'}`}>
       <div className="relative flex flex-col items-center flex-shrink-0 pt-1.5">
         <span className="w-2 h-2 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 shadow-glow" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-300 leading-relaxed">
-          <span className="text-white font-medium">{activity.user_name}</span>{' '}
+        <p className={`text-sm leading-relaxed ${isLight ? 'text-gray-600' : 'text-gray-300'}`}>
+          <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{activity.user_name}</span>{' '}
           {activity.action}
           {activity.task_title && (
             <span className="text-indigo-400"> &quot;{activity.task_title}&quot;</span>
           )}
         </p>
-        <p className="text-xs text-gray-500 mt-0.5">{timeAgo}</p>
+        <p className={`text-xs mt-0.5 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>{timeAgo}</p>
       </div>
     </div>
   );
@@ -163,6 +164,7 @@ function getGreeting() {
 export default function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { isLight } = useTheme();
   const [stats, setStats] = useState(null);
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -280,7 +282,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={openCustomize}
-            className={`btn-secondary flex items-center gap-2 text-sm ${isCustomized ? '!border-indigo-500/50 !text-indigo-300' : ''}`}
+            className={`btn-secondary flex items-center gap-2 text-sm ${isLight ? '!bg-gray-100 !text-gray-600 hover:!bg-gray-200' : ''} ${isCustomized ? '!border-indigo-500/50 !text-indigo-300' : ''}`}
             title="Atur widget dashboard"
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -294,10 +296,10 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {bandItems(BANDS[0]).some((it) => it.id === 'stat-cards') && (
               <>
-                <StatCard icon={ClipboardCheck} label="Total Tasks" value={stats?.totalTasks || 0} color="bg-gradient-to-br from-gray-500 to-gray-600" delay={0} />
-                <StatCard icon={Play} label="In Progress" value={stats?.inProgress || 0} color="bg-gradient-to-br from-amber-400 to-amber-600" delay={60} />
-                <StatCard icon={CheckCircle} label="Completed" value={stats?.done || 0} color="bg-gradient-to-br from-emerald-400 to-emerald-600" delay={120} />
-                <StatCard icon={AlertTriangle} label="Overdue" value={stats?.overdue || 0} color="bg-gradient-to-br from-red-400 to-red-600" delay={180} />
+                <StatCard icon={ClipboardCheck} label="Total Tasks" value={stats?.totalTasks || 0} color="bg-gradient-to-br from-gray-500 to-gray-600" delay={0} isLight={isLight} />
+                <StatCard icon={Play} label="In Progress" value={stats?.inProgress || 0} color="bg-gradient-to-br from-amber-400 to-amber-600" delay={60} isLight={isLight} />
+                <StatCard icon={CheckCircle} label="Completed" value={stats?.done || 0} color="bg-gradient-to-br from-emerald-400 to-emerald-600" delay={120} isLight={isLight} />
+                <StatCard icon={AlertTriangle} label="Overdue" value={stats?.overdue || 0} color="bg-gradient-to-br from-red-400 to-red-600" delay={180} isLight={isLight} />
               </>
             )}
           </div>
@@ -308,18 +310,19 @@ export default function DashboardPage() {
           <div className={`${GRID_COLS_2} ${bandItems(BANDS[1]).length === 1 ? 'lg:!grid-cols-1' : ''}`}>
             {bandItems(BANDS[1]).some((it) => it.id === 'status-chart') && (
               <div className="card animate-fade-in-up">
-                <h2 className="text-lg font-semibold text-white mb-4">Tasks by Status</h2>
+                <h2 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>Tasks by Status</h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                    <YAxis stroke="#9ca3af" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e5e7eb' : '#374151'} />
+                    <XAxis dataKey="name" stroke={isLight ? '#6b7280' : '#9ca3af'} fontSize={12} />
+                    <YAxis stroke={isLight ? '#6b7280' : '#9ca3af'} fontSize={12} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: '1px solid #374151',
+                        backgroundColor: isLight ? '#ffffff' : '#1f2937',
+                        border: `1px solid ${isLight ? '#e5e7eb' : '#374151'}`,
                         borderRadius: '8px',
-                        color: '#fff',
+                        color: isLight ? '#111827' : '#fff',
+                        boxShadow: isLight ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
                       }}
                     />
                     <Bar dataKey="value" radius={[4, 4, 0, 0]}>
@@ -335,12 +338,12 @@ export default function DashboardPage() {
               <div className="card animate-fade-in-up">
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="w-5 h-5 text-indigo-400" />
-                  <h2 className="text-lg font-semibold text-white">Member Workload</h2>
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Member Workload</h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-700 text-gray-400">
+                      <tr className={`border-b ${isLight ? 'border-gray-200 text-gray-500' : 'border-gray-700 text-gray-400'}`}>
                         <th className="text-left py-2 px-4">Member</th>
                         <th className="text-center py-2 px-2">Todo</th>
                         <th className="text-center py-2 px-2">In Progress</th>
@@ -351,11 +354,11 @@ export default function DashboardPage() {
                     </thead>
                     <tbody>
                       {(stats?.memberStats || []).map((member) => (
-                        <MemberWorkloadRow key={member.name} member={member} />
+                        <MemberWorkloadRow key={member.name} member={member} isLight={isLight} />
                       ))}
                       {(!stats?.memberStats || stats.memberStats.length === 0) && (
                         <tr>
-                          <td colSpan={6} className="py-4 text-center text-gray-500">
+                          <td colSpan={6} className={`py-4 text-center ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>
                             No member data available
                           </td>
                         </tr>
@@ -372,21 +375,21 @@ export default function DashboardPage() {
         {bandItems(BANDS[2]).length > 0 && (
           <div className={bandItems(BANDS[2]).length === 1 ? 'grid grid-cols-1 gap-6' : GRID_COLS_3}>
             {bandItems(BANDS[2]).some((it) => it.id === 'projects-overview') && (
-              <div className={`bg-gray-800 rounded-xl p-6 border border-gray-700 ${bandItems(BANDS[2]).length === 1 ? '' : 'lg:col-span-2'}`}>
+              <div className={`rounded-xl p-6 border ${isLight ? 'bg-white border-gray-200' : 'bg-gray-800 border-gray-700'} ${bandItems(BANDS[2]).length === 1 ? '' : 'lg:col-span-2'}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <FolderOpen className="w-5 h-5 text-indigo-400" />
-                  <h2 className="text-lg font-semibold text-white">
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
                     Projects Overview
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-700/50 rounded-lg p-4">
-                    <p className="text-sm text-gray-400">Total Projects</p>
-                    <p className="text-3xl font-bold text-white">{stats?.totalProjects || 0}</p>
+                  <div className={`rounded-lg p-4 ${isLight ? 'bg-gray-50' : 'bg-gray-700/50'}`}>
+                    <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>Total Projects</p>
+                    <p className={`text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{stats?.totalProjects || 0}</p>
                   </div>
-                  <div className="bg-gray-700/50 rounded-lg p-4">
-                    <p className="text-sm text-gray-400">Active Tasks</p>
-                    <p className="text-3xl font-bold text-white">
+                  <div className={`rounded-lg p-4 ${isLight ? 'bg-gray-50' : 'bg-gray-700/50'}`}>
+                    <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>Active Tasks</p>
+                    <p className={`text-3xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
                       {(stats?.inProgress || 0) + (stats?.review || 0)}
                     </p>
                   </div>
@@ -395,14 +398,14 @@ export default function DashboardPage() {
             )}
             {bandItems(BANDS[2]).some((it) => it.id === 'recent-activity') && (
               <div className="card animate-fade-in-up">
-                <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
+                <h2 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>Recent Activity</h2>
                 <div className="max-h-80 overflow-y-auto">
                   {activities.length > 0 ? (
                     activities.map((activity) => (
-                      <ActivityItem key={activity.id} activity={activity} />
+                      <ActivityItem key={activity.id} activity={activity} isLight={isLight} />
                     ))
                   ) : (
-                    <p className="text-gray-500 text-sm text-center py-4">No recent activity</p>
+                    <p className={`text-sm text-center py-4 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>No recent activity</p>
                   )}
                 </div>
               </div>
@@ -417,7 +420,7 @@ export default function DashboardPage() {
               <div className="card animate-fade-in-up">
                 <div className="flex items-center gap-2 mb-4">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
-                  <h2 className="text-lg font-semibold text-white">Overdue Tasks</h2>
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Overdue Tasks</h2>
                   {stats?.overdue > 0 && (
                     <span className="bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
                       {stats.overdue}
@@ -430,11 +433,11 @@ export default function DashboardPage() {
                       <div
                         key={task.id}
                         onClick={() => router.push(`/task/${task.id}`)}
-                        className="flex items-center justify-between py-2.5 border-b border-gray-700/50 last:border-0 cursor-pointer hover:bg-gray-700/40 px-2 -mx-2 rounded-lg transition-colors"
+                        className={`flex items-center justify-between py-2.5 last:border-0 cursor-pointer px-2 -mx-2 rounded-lg transition-colors ${isLight ? 'border-b border-gray-100 hover:bg-gray-50' : 'border-b border-gray-700/50 hover:bg-gray-700/40'}`}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white font-medium truncate">{task.title}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className={`text-sm font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>{task.title}</p>
+                          <p className={`text-xs ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>
                             {task.project_name && <span>{task.project_name}</span>}
                             {task.assignee_name && <span> · {task.assignee_name}</span>}
                           </p>
@@ -448,7 +451,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-6">
                       <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">No overdue tasks</p>
+                      <p className={`text-sm ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>No overdue tasks</p>
                     </div>
                   )}
                 </div>
@@ -458,20 +461,21 @@ export default function DashboardPage() {
               <div className="card animate-fade-in-up">
                 <div className="flex items-center gap-2 mb-4">
                   <Activity className="w-5 h-5 text-indigo-400" />
-                  <h2 className="text-lg font-semibold text-white">Weekly Velocity</h2>
+                  <h2 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Weekly Velocity</h2>
                 </div>
                 {stats?.weeklyVelocity?.length > 0 ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart data={stats.weeklyVelocity}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="week" stroke="#9ca3af" fontSize={12} />
-                      <YAxis stroke="#9ca3af" fontSize={12} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={isLight ? '#e5e7eb' : '#374151'} />
+                      <XAxis dataKey="week" stroke={isLight ? '#6b7280' : '#9ca3af'} fontSize={12} />
+                      <YAxis stroke={isLight ? '#6b7280' : '#9ca3af'} fontSize={12} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1f2937',
-                          border: '1px solid #374151',
+                          backgroundColor: isLight ? '#ffffff' : '#1f2937',
+                          border: `1px solid ${isLight ? '#e5e7eb' : '#374151'}`,
                           borderRadius: '8px',
-                          color: '#fff',
+                          color: isLight ? '#111827' : '#fff',
+                          boxShadow: isLight ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
                         }}
                       />
                       <Line
@@ -486,7 +490,7 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-64">
-                    <p className="text-gray-500 text-sm">No velocity data yet</p>
+                    <p className={`text-sm ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>No velocity data yet</p>
                   </div>
                 )}
               </div>
@@ -511,13 +515,13 @@ export default function DashboardPage() {
         {/* Customize panel */}
         {showCustomize && (
           <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowCustomize(false)}>
-            <div className="glass-panel w-full max-w-md max-h-[80vh] flex flex-col animate-scale-in" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700/70">
+            <div className={`glass-panel w-full max-w-md max-h-[80vh] flex flex-col animate-scale-in ${isLight ? '!bg-white !border-gray-200' : ''}`} onClick={(e) => e.stopPropagation()}>
+              <div className={`flex items-center justify-between px-5 py-4 border-b ${isLight ? 'border-gray-200' : 'border-gray-700/70'}`}>
                 <div>
-                  <h3 className="text-white font-bold">Kustomisasi Dashboard</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Pilih widget yang tampil & urutannya</p>
+                  <h3 className={`font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Kustomisasi Dashboard</h3>
+                  <p className={`text-xs mt-0.5 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>Pilih widget yang tampil & urutannya</p>
                 </div>
-                <button onClick={() => setShowCustomize(false)} className="text-gray-400 hover:text-white transition-colors">
+                <button onClick={() => setShowCustomize(false)} className={`transition-colors ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-gray-400 hover:text-white'}`}>
                   <i className="fa-solid fa-xmark text-lg"></i>
                 </button>
               </div>
@@ -530,28 +534,28 @@ export default function DashboardPage() {
                     : ids;
                   return (
                     <div key={band.id}>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500 mb-2">{band.label}</p>
+                      <p className={`text-[10px] font-bold uppercase tracking-[0.14em] mb-2 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>{band.label}</p>
                       <div className="space-y-1.5">
                         {ord.map((id, i) => {
                           const item = band.items.find((it) => it.id === id);
                           const shown = !(draft.hidden || []).includes(id);
                           return (
-                            <div key={id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${shown ? 'border-gray-700 bg-gray-800/50' : 'border-gray-800 bg-gray-900/40 opacity-55'}`}>
-                              <button onClick={() => toggleItem(id)} className="text-gray-400 hover:text-white transition-colors shrink-0" title={shown ? 'Sembunyikan' : 'Tampilkan'}>
+                            <div key={id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${shown ? (isLight ? 'border-gray-200 bg-gray-50' : 'border-gray-700 bg-gray-800/50') : (isLight ? 'border-gray-100 bg-gray-100/50 opacity-55' : 'border-gray-800 bg-gray-900/40 opacity-55')}`}>
+                              <button onClick={() => toggleItem(id)} className={`transition-colors shrink-0 ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-gray-400 hover:text-white'}`} title={shown ? 'Sembunyikan' : 'Tampilkan'}>
                                 {shown ? <Eye className="w-4 h-4 text-indigo-400" /> : <EyeOff className="w-4 h-4" />}
                               </button>
-                              <span className={`flex-1 text-sm truncate ${shown ? 'text-white' : 'text-gray-500'}`}>{item?.label || id}</span>
+                              <span className={`flex-1 text-sm truncate ${shown ? (isLight ? 'text-gray-900' : 'text-white') : (isLight ? 'text-gray-400' : 'text-gray-500')}`}>{item?.label || id}</span>
                               <button
                                 onClick={() => moveWithinBand(band.id, id, -1)}
                                 disabled={i === 0}
-                                className="w-6 h-6 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+                                className={`w-6 h-6 rounded flex items-center justify-center disabled:opacity-25 disabled:hover:bg-transparent transition-colors ${isLight ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-200 disabled:hover:bg-transparent' : 'text-gray-500 hover:text-white hover:bg-gray-700 disabled:hover:bg-transparent'}`}
                               >
                                 <ChevronUp className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => moveWithinBand(band.id, id, 1)}
                                 disabled={i === ord.length - 1}
-                                className="w-6 h-6 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-25 disabled:hover:bg-transparent transition-colors"
+                                className={`w-6 h-6 rounded flex items-center justify-center disabled:opacity-25 disabled:hover:bg-transparent transition-colors ${isLight ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-200 disabled:hover:bg-transparent' : 'text-gray-500 hover:text-white hover:bg-gray-700 disabled:hover:bg-transparent'}`}
                               >
                                 <ChevronDown className="w-3.5 h-3.5" />
                               </button>
@@ -564,17 +568,17 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              <div className="flex items-center justify-between px-5 py-4 border-t border-gray-700/70">
+              <div className={`flex items-center justify-between px-5 py-4 border-t ${isLight ? 'border-gray-200' : 'border-gray-700/70'}`}>
                 <button
                   onClick={() => saveLayout(DEFAULT_LAYOUT)}
                   disabled={savingLayout}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-1.5 text-xs transition-colors disabled:opacity-50 ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-gray-400 hover:text-white'}`}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   Reset bawaan
                 </button>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setShowCustomize(false)} className="btn-secondary !py-1.5 text-sm">Batal</button>
+                  <button onClick={() => setShowCustomize(false)} className={`btn-secondary !py-1.5 text-sm ${isLight ? '!bg-gray-100 !text-gray-600 hover:!bg-gray-200' : ''}`}>Batal</button>
                   <button onClick={() => saveLayout(draft)} disabled={savingLayout} className="btn-primary !py-1.5 text-sm">
                     {savingLayout ? 'Menyimpan…' : 'Simpan'}
                   </button>

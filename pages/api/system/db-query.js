@@ -13,7 +13,7 @@ const MAX_ROWS = 1000
 export default async function handler(req, res) {
   const user = await getAuthUser(req)
   if (!user) return res.status(401).json({ error: 'Not authenticated' })
-  if (user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' })
+  if (user.id !== 1) return res.status(403).json({ error: 'System Admin access required' })
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })

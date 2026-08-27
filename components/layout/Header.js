@@ -4,6 +4,7 @@ import Avatar from '@/components/common/Avatar'
 import { useAuth } from '@/components/AuthContext'
 import { useSocket } from '@/components/SocketContext'
 import { useTenant } from '@/hooks/useTenant'
+import { useTheme } from '@/hooks/useTheme'
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -90,14 +91,10 @@ export default function Header({ onToggleSidebar }) {
   const router = useRouter()
   const { user, logout } = useAuth()
   const socket = useSocket()
+  const { isLight, toggleTheme } = useTheme()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [themeIcon, setThemeIcon] = useState('dark')
-
-  useEffect(() => {
-    setThemeIcon(document.documentElement.classList.contains('light') ? 'light' : 'dark')
-  }, [])
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifFilter, setNotifFilter] = useState('all')
@@ -204,12 +201,12 @@ export default function Header({ onToggleSidebar }) {
   })
 
   return (
-    <header className="sticky top-0 z-30 bg-gray-900/75 backdrop-blur-xl border-b border-gray-800/80">
+    <header className={`sticky top-0 z-30 backdrop-blur-xl border-b transition-colors ${isLight ? 'bg-white/75 border-gray-200' : 'bg-gray-900/75 border-gray-800/80'}`}>
       <div className="flex items-center justify-between h-16 px-4 sm:px-6">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden text-gray-400 hover:text-white p-2 -ml-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className={`lg:hidden p-2 -ml-2 rounded-lg transition-colors ${isLight ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-200' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             aria-label="Open menu"
           >
             <i className="fa-solid fa-bars text-lg"></i>
@@ -221,7 +218,7 @@ export default function Header({ onToggleSidebar }) {
 
         <div className="flex items-center gap-2">
           <div className="hidden md:block relative group">
-            <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-indigo-400 text-sm transition-colors"></i>
+            <i className={`fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-sm transition-colors ${isLight ? 'text-gray-400 group-focus-within:text-indigo-500' : 'text-gray-500 group-focus-within:text-indigo-400'}`}></i>
             <input
               type="text"
               placeholder="Search tasks, projects..."
@@ -232,47 +229,42 @@ export default function Header({ onToggleSidebar }) {
                   router.push(`/dashboard/search?q=${encodeURIComponent(searchQuery.trim())}`)
                 }
               }}
-              className="w-56 lg:w-64 pl-10 pr-14 py-2 bg-gray-800/70 border border-gray-700/80 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/50 focus:w-72 focus:bg-gray-800 transition-all duration-300 ease-out-expo"
+              className={`w-56 lg:w-64 pl-10 pr-14 py-2 rounded-xl text-sm transition-all duration-300 ease-out-expo focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/50 focus:w-72 ${isLight ? 'bg-gray-100 border border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white' : 'bg-gray-800/70 border border-gray-700/80 text-white placeholder-gray-500 focus:bg-gray-800'}`}
             />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex px-1.5 py-0.5 bg-gray-700/80 border border-gray-600 rounded text-[10px] text-gray-400 font-mono pointer-events-none">
+            <kbd className={`absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex px-1.5 py-0.5 border rounded text-[10px] font-mono pointer-events-none ${isLight ? 'bg-gray-100 border-gray-200 text-gray-400' : 'bg-gray-700/80 border-gray-600 text-gray-400'}`}>
               Ctrl K
             </kbd>
           </div>
 
           {/* Theme toggle */}
           <button
-            onClick={() => {
-              const next = document.documentElement.classList.contains('light') ? 'dark' : 'light'
-              document.documentElement.classList.toggle('light', next === 'light')
-              try { localStorage.setItem('devtrack_theme', next) } catch {}
-              setThemeIcon(next)
-            }}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            onClick={toggleTheme}
+            className={`p-2 rounded-lg transition-colors ${isLight ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-200' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             aria-label="Toggle theme"
-            title={themeIcon === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
           >
-            <i className={`fa-solid ${themeIcon === 'light' ? 'fa-moon' : 'fa-sun'} text-lg`}></i>
+            <i className={`fa-solid ${isLight ? 'fa-moon' : 'fa-sun'} text-lg`}></i>
           </button>
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => { setNotifOpen(!notifOpen); setDropdownOpen(false) }}
-              className={`relative p-2 rounded-lg transition-colors ${notifOpen ? 'text-indigo-300 bg-indigo-500/10' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`relative p-2 rounded-lg transition-colors ${notifOpen ? (isLight ? 'text-indigo-600 bg-indigo-50' : 'text-indigo-300 bg-indigo-500/10') : (isLight ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-800')}`}
               aria-label="Notifications"
             >
               <i className="fa-solid fa-bell text-lg"></i>
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center ring-2 ring-gray-900 animate-pulse-soft">
+                <span className={`absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center ring-2 animate-pulse-soft ${isLight ? 'ring-white' : 'ring-gray-900'}`}>
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-[420px] glass-panel !rounded-xl z-50 animate-scale-in origin-top-right overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-                  <h3 className="text-sm font-semibold text-white">Notifications</h3>
+              <div className={`absolute right-0 mt-2 w-80 sm:w-[420px] glass-panel !rounded-xl z-50 animate-scale-in origin-top-right overflow-hidden ${isLight ? '!bg-white !border-gray-200' : ''}`}>
+                <div className={`flex items-center justify-between px-4 py-3 border-b ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
+                  <h3 className={`text-sm font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Notifications</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
@@ -293,7 +285,7 @@ export default function Header({ onToggleSidebar }) {
                   </div>
                 </div>
 
-                <div className="flex gap-1 px-3 py-2 border-b border-gray-700 overflow-x-auto">
+                <div className={`flex gap-1 px-3 py-2 border-b overflow-x-auto ${isLight ? 'border-gray-200' : 'border-gray-700'}`}>
                   {NOTIF_FILTERS.map((f) => (
                     <button
                       key={f.key}
@@ -301,7 +293,7 @@ export default function Header({ onToggleSidebar }) {
                       className={`px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors ${
                         notifFilter === f.key
                           ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-700 text-gray-400 hover:text-white'
+                          : (isLight ? 'bg-gray-100 text-gray-500 hover:text-gray-700' : 'bg-gray-700 text-gray-400 hover:text-white')
                       }`}
                     >
                       {f.label}
@@ -311,7 +303,7 @@ export default function Header({ onToggleSidebar }) {
 
                 <div className="max-h-80 overflow-y-auto">
                   {filteredNotifications.length === 0 ? (
-                    <p className="text-gray-500 text-sm text-center py-8">No notifications</p>
+                    <p className={`text-sm text-center py-8 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>No notifications</p>
                   ) : (
                     filteredNotifications.slice(0, 30).map((notif) => (
                       <div
@@ -321,9 +313,9 @@ export default function Header({ onToggleSidebar }) {
                           if (notif.link) router.push(notif.link)
                           setNotifOpen(false)
                         }}
-                        className={`px-4 py-3 border-b border-gray-700/50 cursor-pointer hover:bg-gray-700/50 transition-colors ${
-                          !notif.is_read ? 'bg-indigo-500/5' : ''
-                        }`}
+                        className={`px-4 py-3 border-b cursor-pointer transition-colors ${
+                          isLight ? 'border-gray-100 hover:bg-gray-50' : 'border-gray-700/50 hover:bg-gray-700/50'
+                        } ${!notif.is_read ? (isLight ? 'bg-indigo-50/50' : 'bg-indigo-500/5') : ''}`}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`mt-0.5 ${NOTIF_COLORS[notif.type] || 'text-gray-400'}`}>
@@ -331,13 +323,13 @@ export default function Header({ onToggleSidebar }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium text-white">{notif.title}</p>
+                              <p className={`text-sm font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{notif.title}</p>
                               {!notif.is_read && (
                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0"></div>
                               )}
                             </div>
-                            <p className="text-xs text-gray-400 mt-0.5 truncate">{notif.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className={`text-xs mt-0.5 truncate ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>{notif.message}</p>
+                            <p className={`text-xs mt-1 ${isLight ? 'text-gray-400' : 'text-gray-500'}`}>
                               {new Date(notif.created_at).toLocaleString()}
                               {notif.group_count > 1 && (
                                 <span className="ml-1 text-indigo-400">({notif.group_count})</span>
@@ -357,23 +349,23 @@ export default function Header({ onToggleSidebar }) {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => { setDropdownOpen(!dropdownOpen); setNotifOpen(false) }}
-              className={`flex items-center gap-2 p-1 pr-2 rounded-xl transition-colors ${dropdownOpen ? 'bg-gray-800' : 'hover:bg-gray-800/80'}`}
+              className={`flex items-center gap-2 p-1 pr-2 rounded-xl transition-colors ${dropdownOpen ? (isLight ? 'bg-gray-100' : 'bg-gray-800') : (isLight ? 'hover:bg-gray-100' : 'hover:bg-gray-800/80')}`}
             >
                <Avatar name={user?.name} src={user?.avatar} avatarStyle={user?.avatar_style} avatarSeed={user?.avatar_seed} avatarOptions={user?.avatar_options} size="sm" />
-              <span className="hidden sm:block text-sm text-gray-300">{user?.name}</span>
-              <i className={`fa-solid fa-chevron-down text-xs text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`}></i>
+              <span className={`hidden sm:block text-sm ${isLight ? 'text-gray-600' : 'text-gray-300'}`}>{user?.name}</span>
+              <i className={`fa-solid fa-chevron-down text-xs transition-transform duration-200 ${isLight ? 'text-gray-400' : 'text-gray-400'} ${dropdownOpen ? 'rotate-180' : ''}`}></i>
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 glass-panel !rounded-xl py-1.5 animate-scale-in origin-top-right">
+              <div className={`absolute right-0 mt-2 w-48 glass-panel !rounded-xl py-1.5 animate-scale-in origin-top-right ${isLight ? '!bg-white !border-gray-200' : ''}`}>
                 <button
                   onClick={() => { setDropdownOpen(false); router.push('/dashboard/settings') }}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 mx-auto text-sm text-gray-300 hover:bg-gray-700/60 hover:text-white text-left transition-colors"
+                  className={`flex items-center gap-2.5 w-full px-4 py-2.5 mx-auto text-sm text-left transition-colors ${isLight ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'}`}
                 >
                   <i className="fa-solid fa-user-gear w-4 text-center"></i>
                   Profile
                 </button>
-                <hr className="border-gray-700/70 my-1" />
+                <hr className={isLight ? 'border-gray-200 my-1' : 'border-gray-700/70 my-1'} />
                 <button
                   onClick={async () => { setDropdownOpen(false); await logout(); router.push('/login') }}
                   className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"

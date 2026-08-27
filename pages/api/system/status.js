@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   const user = await getAuthUser(req);
-  if (!user || user.role !== 'admin') {
+  if (!user || user.id !== 1) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 

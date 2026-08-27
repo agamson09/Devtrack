@@ -77,16 +77,16 @@ const FEATURES = [
 ]
 
 const TECH = [
-  { name: 'Next.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg' },
-  { name: 'React', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg' },
-  { name: 'Tailwind CSS', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-original.svg' },
-  { name: 'MySQL', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg' },
-  { name: 'Socket.IO', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/socketio/socketio-original.svg' },
-  { name: 'Node.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg' },
-  { name: 'C#', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/csharp/csharp-original.svg' },
-  { name: 'Docker', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg' },
-  { name: 'Git', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg' },
-  { name: 'Nginx', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg' },
+  { name: 'Next.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nextjs/nextjs-original.svg' },
+  { name: 'React', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/react/react-original.svg' },
+  { name: 'Tailwind CSS', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg' },
+  { name: 'MySQL', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mysql/mysql-original.svg' },
+  { name: 'Socket.IO', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/socketio/socketio-original.svg' },
+  { name: 'Node.js', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg' },
+  { name: 'C#', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/csharp/csharp-original.svg' },
+  { name: 'Docker', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg' },
+  { name: 'Git', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/git/git-original.svg' },
+  { name: 'Nginx', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nginx/nginx-original.svg' },
 ]
 
 const STATS = [
@@ -185,7 +185,7 @@ export default function LandingPage() {
                 <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
                 <a href="#tech" className="text-sm text-gray-400 hover:text-white transition-colors">Tech Stack</a>
                 <a href="#roadmap" className="text-sm text-gray-400 hover:text-white transition-colors">Roadmap</a>
-                <a href="https://github.com" target="_blank" rel="noopener" className="text-sm text-gray-400 hover:text-white transition-colors">
+                <a href="https://github.com/agamson09/Devtrack" target="_blank" rel="noopener" className="text-sm text-gray-400 hover:text-white transition-colors">
                   <i className="fa-brands fa-github text-lg"></i>
                 </a>
               </div>
@@ -253,7 +253,7 @@ export default function LandingPage() {
               <a href="/register" className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl transition-all duration-200 shadow-2xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-1 text-lg">
                 Get Started Free
               </a>
-              <a href="https://github.com" target="_blank" rel="noopener" className="w-full sm:w-auto px-8 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 text-white font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm text-lg flex items-center justify-center gap-3">
+              <a href="https://github.com/agamson09/Devtrack" target="_blank" rel="noopener" className="w-full sm:w-auto px-8 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 text-white font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm text-lg flex items-center justify-center gap-3">
                 <i className="fa-brands fa-github text-xl"></i>
                 View on GitHub
               </a>
@@ -462,7 +462,7 @@ export default function LandingPage() {
                   <a href="/register" className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 font-bold rounded-2xl transition-all duration-200 shadow-2xl shadow-white/10 hover:shadow-white/20 hover:-translate-y-1 text-lg">
                     Start Free →
                   </a>
-                  <a href="https://github.com" target="_blank" rel="noopener" className="w-full sm:w-auto px-8 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm text-lg">
+                  <a href="https://github.com/agamson09/Devtrack" target="_blank" rel="noopener" className="w-full sm:w-auto px-8 py-4 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white font-semibold rounded-2xl transition-all duration-200 backdrop-blur-sm text-lg">
                     <i className="fa-brands fa-github mr-2"></i>
                     Star on GitHub
                   </a>
@@ -489,7 +489,7 @@ export default function LandingPage() {
                 <a href="#features" className="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
                 <a href="#tech" className="text-sm text-gray-400 hover:text-white transition-colors">Tech</a>
                 <a href="#roadmap" className="text-sm text-gray-400 hover:text-white transition-colors">Roadmap</a>
-                <a href="https://github.com" target="_blank" rel="noopener" className="text-gray-400 hover:text-white transition-colors">
+                <a href="https://github.com/agamson09/Devtrack" target="_blank" rel="noopener" className="text-gray-400 hover:text-white transition-colors">
                   <i className="fa-brands fa-github text-lg"></i>
                 </a>
               </div>

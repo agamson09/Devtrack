@@ -1,4 +1,4 @@
-﻿CREATE DATABASE IF NOT EXISTS devtrack CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS devtrack CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE devtrack;
 
 CREATE TABLE IF NOT EXISTS users (
@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   telegram_chat_id VARCHAR(100) DEFAULT NULL,
   email_notifications TINYINT(1) DEFAULT 1,
   telegram_notifications TINYINT(1) DEFAULT 1,
+  is_approved TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -150,8 +151,4 @@ CREATE TABLE IF NOT EXISTS db_connections (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO users (name, email, password, role) VALUES
-('Admin', 'admin@devtrack.local', '$2b$10$.ZiAMJSLmU4S2BFn2aSKL.D4VW6FAUW64StTWeXLAg2/4rn3tvUxS', 'admin');
 
-INSERT INTO users (name, email, password, role) VALUES
-('Developer 1', 'dev1@devtrack.local', '$2b$10$.ZiAMJSLmU4S2BFn2aSKL.D4VW6FAUW64StTWeXLAg2/4rn3tvUxS', 'member');

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '@/components/AuthContext'
+import { useTheme } from '@/hooks/useTheme'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import Loading from '@/components/common/Loading'
@@ -9,6 +10,7 @@ import KeyboardShortcuts from '@/components/common/KeyboardShortcuts'
 export default function Layout({ children }) {
   const router = useRouter()
   const { user, loading } = useAuth()
+  const { isLight } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -36,7 +38,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className={`min-h-screen transition-colors ${isLight ? 'bg-gray-50' : 'bg-gray-900'}`}>
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
