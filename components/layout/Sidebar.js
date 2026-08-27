@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Avatar from '@/components/common/Avatar'
 import { useAuth } from '@/components/AuthContext'
 import { useTenant } from '@/hooks/useTenant'
+import { useTheme } from '@/hooks/useTheme'
 import TenantSwitcher from '@/components/tenant/TenantSwitcher'
 
 const navSections = [
