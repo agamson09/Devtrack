@@ -133,7 +133,7 @@ function setSecurityHeaders(res) {
   res.setHeader('X-DNS-Prefetch-Control', 'on')
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://ui-avatars.com https://avatars.githubusercontent.com https://api.dicebear.com; connect-src 'self' wss: ws: https://api.dicebear.com; frame-ancestors 'none'")
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://ui-avatars.com https://avatars.githubusercontent.com https://api.dicebear.com https://cdn.simpleicons.org; connect-src 'self' wss: ws: https://api.dicebear.com; frame-ancestors 'none'")
   }
 }
 
