@@ -101,6 +101,7 @@ function linkVisible(link, user) {
 export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
   const router = useRouter()
   const { user, logout } = useAuth()
+  const { isLight } = useTheme()
   const { settings: tenantSettings } = useTenant()
   const [unreadChat, setUnreadChat] = useState(0)
 
@@ -166,13 +167,14 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
       )}
 
       <aside
-        className={`force-dark fixed top-0 left-0 h-full z-50 bg-gray-800/95 backdrop-blur-xl border-r border-gray-700/70 flex flex-col transition-all duration-300 ease-out-expo
+        className={`fixed top-0 left-0 h-full z-50 backdrop-blur-xl border-r flex flex-col transition-all duration-300 ease-out-expo
+          ${isLight ? 'bg-white/95 border-gray-200' : 'bg-gray-800/95 border-gray-700/70'}
           ${collapsed ? 'w-[4.5rem]' : 'w-64'}
           ${isOpen ? 'translate-x-0 shadow-panel lg:shadow-none' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="flex items-center h-16 px-4 border-b border-gray-700/70 flex-shrink-0 justify-center">
+        <div className={`flex items-center h-16 px-4 border-b flex-shrink-0 justify-center ${isLight ? 'border-gray-200' : 'border-gray-700/70'}`}>
           {collapsed ? (
             tenantSettings?.logo_icon_url ? (
               <img src={tenantSettings.logo_icon_url} alt={tenantSettings?.app_name || 'DevTrack'} className="h-9 w-9 flex-shrink-0" />
@@ -193,7 +195,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
 
           <button
             onClick={onClose}
-            className="lg:hidden ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded-md hover:bg-gray-700"
+            className={`lg:hidden ml-auto p-1 rounded-md transition-colors ${isLight ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
             aria-label="Close menu"
           >
             <i className="fa-solid fa-xmark text-lg"></i>
@@ -208,10 +210,10 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
           {visibleSections.map((section, sIdx) => (
             <div key={section.label} className={sIdx > 0 ? 'mt-4' : ''}>
               {!collapsed && (
-                <p className="section-label !px-3">{section.label}</p>
+                <p className={`text-xs font-semibold uppercase tracking-wider mb-2 px-3 ${isLight ? 'text-gray-500' : 'text-gray-400'}`}>{section.label}</p>
               )}
               {collapsed && sIdx > 0 && (
-                <div className="mx-auto my-3 h-px w-8 bg-gray-700" />
+                <div className={`mx-auto my-3 h-px w-8 ${isLight ? 'bg-gray-200' : 'bg-gray-700'}`} />
               )}
               <div className="space-y-0.5 px-0">
                 {section.links.map((link) => {
@@ -231,14 +233,14 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                             collapsed ? 'justify-center' : ''
                           } ${
                             isActive
-                              ? 'bg-indigo-500/15 text-indigo-300'
-                              : 'text-gray-400 hover:bg-gray-700/60 hover:text-white hover:translate-x-0.5'
+                              ? (isLight ? 'bg-indigo-50 text-indigo-600' : 'bg-indigo-500/15 text-indigo-300')
+                              : (isLight ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700/60 hover:text-white hover:translate-x-0.5')
                           }`}
                         >
                           {isActive && (
                             <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-indigo-400 to-violet-500" />
                           )}
-                          <div className={`relative w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-md transition-colors ${isActive ? 'bg-indigo-500/20' : 'group-hover:bg-gray-600/50'}`}>
+                          <div className={`relative w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-md transition-colors ${isActive ? (isLight ? 'bg-indigo-100' : 'bg-indigo-500/20') : (isLight ? 'group-hover:bg-gray-200' : 'group-hover:bg-gray-600/50')}`}>
                             <i className={`fa-solid ${link.icon} text-sm`}></i>
                           </div>
                           {!collapsed && (
@@ -251,19 +253,19 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
 
                         {/* Expanded sub-menu (normal mode) */}
                         {isExpanded && !collapsed && (
-                          <div className="ml-4 mt-1 space-y-0.5 border-l border-gray-700/70 pl-2">
+                          <div className={`ml-4 mt-1 space-y-0.5 border-l pl-2 ${isLight ? 'border-gray-200' : 'border-gray-700/70'}`}>
                             {link.children.map(child => {
                               const childActive = router.pathname === child.href
                               return (
                                 <button
                                   key={child.href}
                                   onClick={() => navigate(child.href)}
-                                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 text-left w-full ${
-                                    childActive
-                                      ? 'bg-indigo-500/15 text-indigo-300'
-                                      : 'text-gray-400 hover:bg-gray-700/60 hover:text-white'
-                                  }`}
-                                >
+                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 text-left w-full ${
+                                      childActive
+                                        ? (isLight ? 'bg-indigo-50 text-indigo-600' : 'bg-indigo-500/15 text-indigo-300')
+                                        : (isLight ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700/60 hover:text-white')
+                                    }`}
+                                  >
                                   <i className={`fa-solid ${child.icon} text-xs w-4 text-center`}></i>
                                   <span className="whitespace-nowrap">{child.label}</span>
                                 </button>
@@ -284,14 +286,14 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                         collapsed ? 'justify-center' : ''
                       } ${
                         isActive
-                          ? 'bg-indigo-500/15 text-indigo-300'
-                          : 'text-gray-400 hover:bg-gray-700/60 hover:text-white hover:translate-x-0.5'
+                          ? (isLight ? 'bg-indigo-50 text-indigo-600' : 'bg-indigo-500/15 text-indigo-300')
+                          : (isLight ? 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' : 'text-gray-400 hover:bg-gray-700/60 hover:text-white hover:translate-x-0.5')
                       }`}
                     >
                       {isActive && (
                         <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-gradient-to-b from-indigo-400 to-violet-500" />
                       )}
-                      <div className={`relative w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-md transition-colors ${isActive ? 'bg-indigo-500/20' : 'group-hover:bg-gray-600/50'}`}>
+                      <div className={`relative w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-md transition-colors ${isActive ? (isLight ? 'bg-indigo-100' : 'bg-indigo-500/20') : (isLight ? 'group-hover:bg-gray-200' : 'group-hover:bg-gray-600/50')}`}>
                         <i className={`fa-solid ${link.icon} text-sm`}></i>
                         {showBadge && (
                           <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1 ring-2 ring-gray-800 animate-pulse-soft">
